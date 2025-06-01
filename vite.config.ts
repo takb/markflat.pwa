@@ -1,4 +1,5 @@
-import { VitePWA } from 'vite-plugin-pwa';
+import path from 'path'
+import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
@@ -15,7 +16,7 @@ export default defineConfig({
 
     manifest: {
       name: 'markflat',
-      short_name: 'mb',
+      short_name: 'm♭',
       description: 'A pwa to manage, display and edit markflat files',
       theme_color: '#e91e63',
     },
@@ -33,4 +34,9 @@ export default defineConfig({
       type: 'module',
     },
   })],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 })
