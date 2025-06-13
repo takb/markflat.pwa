@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, reactive, toRefs } from "vue";
 
-const useResponsive = () => {
+const useSizes = () => {
     const sizes = reactive({
         browserWidth: window.innerWidth,
         deviceWidth: screen.width,
@@ -15,7 +15,7 @@ const useResponsive = () => {
     }
 
     const isMobile = () => {
-        return window.innerWidth <= 800 ? true : false
+        return window.innerWidth <= 1200 ? true : false
     }
 
     onMounted(() => {
@@ -31,4 +31,4 @@ const useResponsive = () => {
     }
 }
 
-export default useResponsive;
+export default useSizes;

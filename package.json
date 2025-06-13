@@ -11,15 +11,20 @@
   },
   "dependencies": {
     "@primeuix/themes": "^1.1.1",
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/markdown-it": "^14.1.2",
+    "@types/showdown": "^2.0.6",
     "@vite-pwa/assets-generator": "^1.0.0",
     "path": "^0.12.7",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.4",
     "serve": "^14.2.4",
+    "showdown": "^2.1.0",
     "tailwindcss": "^4.1.8",
     "tailwindcss-primeui": "^0.6.1",
     "vue": "^3.5.13",
-    "vue-router": "4"
+    "vue3-touch-events": "^5.0.13",
+    "workbox-build": "^7.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.27",
@@ -30,9 +35,5 @@
     "vite-plugin-pwa": "^0.21.1",
     "vue-tsc": "^2.2.0",
     "workbox-window": "^7.3.0"
-  },
-  "resolutions": {
-    "sharp": "0.32.6",
-    "sharp-ico": "0.1.5"
   }
 }
