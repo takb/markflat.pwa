@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import {ref} from "vue";
+import {ref, toRaw} from "vue";
   import Tabs from 'primevue/tabs';
   import TabList from 'primevue/tablist';
   import Tab from 'primevue/tab';
@@ -8,13 +8,12 @@
   import Splitter from 'primevue/splitter';
   import SplitterPanel from 'primevue/splitterpanel';
   import useSizes from '../composables/sizes.ts';
-  import {mergeContent} from "../composables/util.ts";
   import {store} from '../composables/store.ts';
   import Code from "./Code.vue";
   import Show from "./Show.vue";
 
   const sizes = useSizes()
-  const content = ref(mergeContent(store.selected))
+  const content = ref(toRaw(store.selected)?.content)
   const panelCss = sizes.isMobile.value ? 'w-full h-full min-h-full p-2' : 'h-full w-1/2';
 </script>
 
@@ -42,3 +41,9 @@
     </SplitterPanel>
   </Splitter>
 </template>
+
+<style scoped>
+.p-splitter {
+  border-radius: 0;
+}
+</style>

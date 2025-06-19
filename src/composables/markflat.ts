@@ -86,27 +86,37 @@ showdown.setOption('mbStyle', `<style>
     .mb {
       position: relative;
     }
+    .mb h1 {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin: 0 0 0.5em 0;
+        padding: 0.2em 0;
+    }
     .mb-artist {
       float: right;
       font-size: 0.9em;
+    }
+    .mb ol {
+      list-style: decimal;
     }
     .mb ul {
       list-style: none;
     }
     .mb ul, ol {
       margin: 0;
-      padding: 0 0 0 4.5em;
+      padding: 0 0 0 5em;
     }
     .mb ul li, .mb ol li {
-      margin: 6px 0;
+      margin: 0 0 0.6em 0;
+      padding-left: 0.4em;
       line-height: 1.2em;
     }
-    .mb ul li::before {
-      position: absolute;
-      width: 4em;
-      left: 0;
-      content: attr(list);
+    .mb ul li::marker {
+      content: attr(list) ' ';
       text-align: right;
+    }
+    .mb ul li::marker, .mb ol li::marker {
+      margin-right: 0.5em;
     }
     .mb-has-chords {
       line-height: 1.9em !important;

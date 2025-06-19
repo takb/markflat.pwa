@@ -63,10 +63,3 @@ const items = [
              :buttonProps="{ severity: 'help', rounded: true }" :tooltipOptions="{ position: 'top' }"/>
   <div v-html="html" class="p-2 mb"></div>
 </template>
-
-<style>
-h1 {
-  font-size: 2em;
-  margin-bottom: 0.5em;
-}
-</style>
