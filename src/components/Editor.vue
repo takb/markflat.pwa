@@ -8,7 +8,7 @@ import {ref, toRaw} from "vue";
   import Splitter from 'primevue/splitter';
   import SplitterPanel from 'primevue/splitterpanel';
   import useSizes from '../composables/sizes.ts';
-  import {store} from '../composables/store.ts';
+  import store from '../composables/store.ts';
   import Code from "./Code.vue";
   import Show from "./Show.vue";
 
@@ -28,7 +28,7 @@ import {ref, toRaw} from "vue";
         <Code v-model="content" />
       </TabPanel>
       <TabPanel value="1">
-        <Show :source="content" />
+        <Show v-model="content" />
       </TabPanel>
     </TabPanels>
   </Tabs>
@@ -37,9 +37,10 @@ import {ref, toRaw} from "vue";
       <Code v-model="content"/>
     </SplitterPanel>
     <SplitterPanel>
-      <Show :source="content"/>
+      <Show v-model="content"/>
     </SplitterPanel>
   </Splitter>
+  {{ content }}
 </template>
 
 <style scoped>

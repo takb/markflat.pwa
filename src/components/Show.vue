@@ -1,41 +1,34 @@
 <script setup lang="ts">
 import showdown from "../composables/markflat";
-import {store} from "../composables/store.ts";
+import store from "../composables/store.ts";
 import SpeedDial from 'primevue/speeddial';
-import {ref} from "vue";
+import {computed, ref} from "vue";
 
-const props = defineProps({
-  source: {
-    type: String,
-    default: ""
-  }
-});
+const model = defineModel({type: String, default: ''})
+const md = new showdown.Converter({extensions: ['markflat']});
+const trigger = ref(0);
 const convertHtml = () => {
-  const md = new showdown.Converter({extensions: ['markflat']});
-  return md.makeHtml(props.source);
+  trigger.value++
+  return md.makeHtml(model.value)
 }
-const html = ref(convertHtml())
-const transposeUp = (event) => {
-  let val = showdown.getOption('mbTransposeBy')
+const html = computed(convertHtml)
+const transposeUp = () => {
+  let val = md.getOption('mbTransposeBy')
   val++;
   if (val > 11) {
-    val = 0;
+    val = 0
   }
-  showdown.setOption('mbTransposeBy', val)
-  html.value = convertHtml();
-  console.log(event)
-  event.originalEvent.cancelBubble = true;
-  event.preventDefault();
+  md.setOption('mbTransposeBy', val)
+  trigger.value++
 }
-const transposeDown = (event) => {
-  let val = showdown.getOption('mbTransposeBy')
-  val--;
+const transposeDown = () => {
+  let val = md.getOption('mbTransposeBy')
+  val--
   if (val < -11) {
-    val = 0;
+    val = 0
   }
-  showdown.setOption('mbTransposeBy', val)
-  html.value = convertHtml();
-  event.preventDefault()
+  md.setOption('mbTransposeBy', val)
+  trigger.value++
 }
 const items = [
   {
@@ -60,6 +53,6 @@ const items = [
 
 <template>
   <SpeedDial :model="items" direction="left" :style="{ position: 'absolute', right: '2em', bottom: '2em' }"
-             :buttonProps="{ severity: 'help', rounded: true }" :tooltipOptions="{ position: 'top' }"/>
-  <div v-html="html" class="p-2 mb"></div>
+             :buttonProps="{ severity: 'help', rounded: true }" :tooltipOptions="{ event: 'hover', position: 'top' }"/>
+  <div v-html="html" class="h-full w-full p-2 mb"></div>
 </template>

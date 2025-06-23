@@ -8,41 +8,53 @@ export interface Song {
 }
 
 class Store {
-    songbook: Song[] = [
-        { id: 1, title: 'Song 1', artist: 'artist 1', content: 'Content 1' },
-        { id: 2, title: 'Song 2', artist: 'artist 2', content: 'Content 2' },
-        { id: 3, title: 'Song 3', artist: 'artist 3', content: 'Content 3' },
-        { id: 4, title: 'Song 4', artist: 'artist 4', content: 'Content 4' },
-        { id: 5, title: 'Song 5', artist: 'artist 2', content: 'Content 2' },
-        { id: 6, title: 'Song 6', artist: 'artist 3', content: 'Content 3' },
-        { id: 7, title: 'Song 7', artist: 'artist 1', content: 'Content 1' },
-        { id: 8, title: 'Song 8', artist: 'artist 2', content: 'Content 2' },
-        { id: 9, title: 'Song 9', artist: 'artist 3', content: 'Content 3' },
-        { id: 10, title: 'Song 10', artist: 'artist 1', content: 'Content 1' },
-        { id: 11, title: 'Song 11', artist: 'artist 2', content: 'Content 2' },
-        { id: 12, title: 'Song 12', artist: 'artist 3', content: 'Content 3' },
-        { id: 13, title: 'Song 13', artist: 'artist 4', content: 'Content 4' },
-        { id: 14, title: 'Song 14', artist: 'artist 2', content: 'Content 2' },
-        { id: 15, title: 'Song 15', artist: 'artist 3', content: 'Content 3' },
-        { id: 16, title: 'Song 16', artist: 'artist 1', content: 'Content 1' },
-        { id: 17, title: 'Song 17', artist: 'artist 2', content: 'Content 2' },
-        { id: 18, title: 'Song 18', artist: 'artist 3', content: 'Content 3' },
-        { id: 19, title: 'Song 19', artist: 'artist 4', content: 'Content 4' },
-        { id: 20, title: 'Song 20', artist: 'artist 2', content: 'Content 2' }
-    ]
+    songbook: Song[] = []
     selected: Song | null = null
     view: string = ''
-    delete(data: any) {
-        this.songbook?.splice(this.songbook.indexOf(data), 1)
-    }
-    edit(data: any) {
-        this.selected = data
+    apiKey: string = ''
+    edit(id: number) {
+        this.selectSong(id)
         this.view = 'edit'
     }
-    show(index: number) {
-        this.selected = this.songbook[index]
+    show(id: number) {
+        this.selectSong(id)
         this.view = 'show'
+    }
+    selectSong(id: number) {
+        const index = this.songbook.findIndex(song => song.id === id)
+        this.selected = index !== -1 ? this.songbook[index] : null
+    }
+    deleteSong(id: number) {
+        const index = this.songbook.findIndex(song => song.id === id)
+        if (index !== -1) {
+            this.songbook.splice(index, 1)
+        }
+        this.selected = null
+    }
+    saveSongbook() {
+        localStorage.setItem("songbook", JSON.stringify(this.songbook))
+    }
+    loadSongbook() {
+        this.songbook = JSON.parse(localStorage.getItem("songbook") || '[]') 
+    }
+    saveApiKey() {
+        localStorage.setItem("apiKey", this.apiKey)
+    }
+    loadApiKey() {
+        this.apiKey = localStorage.getItem("apiKey") || ''
+    }
+    addSong() {
+        this.selected = {
+            id: this.songbook.length,
+            title: 'New song',
+            artist: 'Artist',
+            content: '# New song - Artist\n1. Verse  \n~Chorus Chorus  \n',
+        }
+        this.view = 'edit'
     }
 }
 
-export const store = reactive(new Store())
+const store = reactive(new Store())
+store.loadSongbook()
+store.loadApiKey()
+export default store

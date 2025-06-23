@@ -10,22 +10,22 @@
     import InputIcon from 'primevue/inputicon'
     import Menu from 'primevue/menu'
 
-    import { store } from '../composables/store.ts'
+    import store from '../composables/store.ts'
     import useSizes from '../composables/sizes.ts'
 
     const toast = useToast();
-    const editMode = ref(false)
+    const editMode = ref(true)
     const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
     const menu = ref()
     const sizes = useSizes()
     const panelCss = computed(() => {
       return sizes.isMobile.value ? 'h-full w-full' : 'h-full w-8/12 ml-auto mr-auto'
     })
-    const toggle = (event: any) => {
+    const toggle = (event: Event) => {
       menu.value.toggle(event)
     }
     const viewSong = (event: any) => {
-      store.show(event.index)
+      store.show(event.data.id)
     }
     const items = ref([
       {
@@ -43,7 +43,7 @@
               .then(res => {
                 res.json().then(value => {
                   store.songbook = []
-                  let id = 1
+                  let id = 0
                   value.forEach((song: any) => {
                     store.songbook.push({
                       id: id++,
@@ -52,6 +52,7 @@
                       content: song.md
                     })
                   })
+                  store.saveSongbook()
                   toast.add({ severity: 'success', summary: 'Download completed', detail: 'Successfully imported ' + id + ' songs.', life: 3000 })
                 })
               })
@@ -66,7 +67,7 @@
 
 <template>
   <div>
-    <DataTable :value="store.songbook"  v-model:filters="filters" :class="panelCss" scrollable scroll-height="flex" stripedRows removableSort dataKey="id" @row-click="viewSong">
+    <DataTable :value="store.songbook"  v-model:filters="filters" :globalFilterFields="['title', 'artist', 'content']" sortField="title" :sortOrder="1" :class="panelCss" scrollable scroll-height="flex" stripedRows removableSort dataKey="id" @row-click="viewSong">
         <template #header>
             <div class="flex justify-between">
               <Button type="button" icon="pi pi-ellipsis-v" @click="toggle" aria-haspopup="true" aria-controls="overlay_menu" />
@@ -83,9 +84,11 @@
         <Column field="title" header="Title" class="p-2 flex-grow" sortable />
         <Column field="artist" header="Composer/Interpret" sortable />
         <Column>
+            <template #header="_slotProps" v-if="editMode">
+              <Button icon="pi pi-plus" rounded raised @click="() => store.addSong()" class="mr-2" />
+            </template>
             <template #body="slotProps" v-if="editMode">
-                <Button icon="pi pi-pencil" rounded raised @click="() => store.edit(slotProps.data)" class="mr-2" />
-                <Button icon="pi pi-trash" rounded raised @click="() => store.delete(slotProps.data)"/>
+              <Button icon="pi pi-pencil" rounded raised @click="() => store.edit(slotProps.data.id)" class="mr-2" />
             </template>
         </Column>
     </DataTable>

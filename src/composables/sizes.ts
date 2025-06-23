@@ -26,6 +26,8 @@ const useSizes = () => {
         window.removeEventListener('resize', browserResized)
     })
 
+    // Initial check
+    browserResized()
     return {
         ...toRefs(sizes),
     }
