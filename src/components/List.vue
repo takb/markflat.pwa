@@ -5,6 +5,7 @@
     import DataTable from 'primevue/datatable'
     import Column from 'primevue/column'
     import Button from 'primevue/button'
+    import Dialog from 'primevue/dialog'
     import InputText from 'primevue/inputtext'
     import IconField from 'primevue/iconfield'
     import InputIcon from 'primevue/inputicon'
@@ -17,6 +18,7 @@
     const editMode = ref(true)
     const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
     const menu = ref()
+    const settings = ref(false);
     const sizes = useSizes()
     const panelCss = computed(() => {
       return sizes.isMobile.value ? 'h-full w-full' : 'h-full w-8/12 ml-auto mr-auto'
@@ -33,6 +35,13 @@
         icon: 'pi pi-pencil',
         command: () => {
           editMode.value = !editMode.value
+        }
+      },
+      {
+        label: 'Settings',
+        icon: 'pi pi-cog',
+        command: () => {
+          settings.value = true
         }
       },
       {
@@ -92,5 +101,19 @@
             </template>
         </Column>
     </DataTable>
+    <Dialog v-model:visible="settings" modal header="API settings" :style="{ width: '25rem' }">
+      <div class="flex items-center gap-4 mb-4">
+        <label for="username" class="font-semibold w-24">Read Key</label>
+        <InputText type="password" id="readKey" class="flex-auto" v-model="store.apiKeyRead" autocomplete="off" />
+      </div>
+      <div class="flex items-center gap-4 mb-8">
+        <label for="username" class="font-semibold w-24">Write Key</label>
+        <InputText type="password" id="writeKey" class="flex-auto" v-model="store.apiKeyWrite" autocomplete="off" />
+      </div>
+      <div class="flex justify-end gap-2">
+        <Button type="button" label="Cancel" severity="secondary" @click="store.loadApiKeys(); settings = false"></Button>
+        <Button type="button" label="Save" @click="store.saveApiKeys(); settings = false"></Button>
+      </div>
+    </Dialog>
   </div>
 </template> 

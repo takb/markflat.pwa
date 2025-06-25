@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useToast } from 'primevue/usetoast';
+import {computed, ref} from 'vue'
+import {useToast} from 'primevue/usetoast';
 import Button from 'primevue/button'
 import store from '../composables/store'
 
@@ -9,59 +9,99 @@ const toast = useToast();
 const content = ref(model.value)
 const editor = ref()
 const updateContent = (event: Event) => {
-    const target = event.target as HTMLPreElement;
-    model.value = target.innerText
+  const target = event.target as HTMLPreElement;
+  model.value = target.innerText
+  store.setContent(target.innerText)
 }
-const home = (event: Event) => {
-    if (content.value.trim() !== store.selected?.content.trim()) {
-        console.warn("Content has changed, but not saved. Returning to list view.");
-    }
-    store.view = 'list'
+const home = () => {
+  if (content.value.trim() !== store.selected?.content.trim()) {
+    console.warn("Content has changed, but not saved. Returning to list view.");
+  }
+  store.view = 'list'
 }
-const reset = (event: Event) => {
-    if (store.selected) {
-        model.value = store.selected.content;
-        editor.value.innerText = store.selected.content;
-    }
+const reset = () => {
+  if (store.selected) {
+    model.value = store.selected.content;
+    editor.value.innerText = store.selected.content;
+  }
 }
-const save = (event: Event) => {
+const save = () => {
+  if (!changed)
+    return
+  if (!store.apiKeyWrite) {
+    toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
+  }
+  store.saveSong()
+  fetch('https://www.genkidelic.de/songbook.php?store=' + filename.value + '&key=' + store.apiKeyWrite, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({content: model.value})
+  })
+    .then(() => {
+      toast.add({
+        severity: 'success',
+        summary: 'Save completed',
+        detail: 'Successfully saved ' + filename.value + '.',
+        life: 3000
+      })
+    })
+    .catch(err => {
+      console.error(err)
+      toast.add({severity: 'error', summary: 'Delete failed', detail: 'Could not delete song.', life: 3000})
+    })
 }
-const deleteSong = (event: any) => {
-    fetch('https://www.genkidelic.de/songbook.php?delete=' + filename.value + '&key=' + store.apiKey)
-        .then(res => {
-            toast.add({ severity: 'success', summary: 'Delete completed', detail: 'Successfully deleted ' + filename.value + '.', life: 3000 })
-            store.deleteSong(event.data.id)
-        })
-        .catch(err => {
-            console.error(err)
-            toast.add({ severity: 'error', summary: 'Delete failed', detail: 'Could not delete song.', life: 3000 })
-        })
+const deleteSong = () => {
+  if (changed.value) {
+    toast.add({severity: 'error', summary: 'Delete failed', detail: 'To delete a song click the button without changing the file content.', life: 3000})
+    return
+  }
+  if (!store.apiKeyWrite) {
+    toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
+  }
+  store.deleteSong()
+  fetch('https://www.genkidelic.de/songbook.php?delete=' + filename.value + '&key=' + store.apiKeyWrite)
+    .then(() => {
+      toast.add({
+        severity: 'success',
+        summary: 'Delete completed',
+        detail: 'Successfully deleted ' + filename.value + '.',
+        life: 3000
+      })
+    })
+    .catch(err => {
+      console.error(err)
+      toast.add({severity: 'error', summary: 'Delete failed', detail: 'Could not delete song.', life: 3000})
+    })
 }
 const filename = computed(() => {
-    const matched = model.value.match(/^# (.+?) -/);
-    return matched ? matched[1].replace(/\(.*\)/g, '').trim().toLowerCase().replace(/\s+/g, '_').replace(/\'/g, '') + '.mb' : "newfile.md"
+  const matched = model.value.match(/^# (.+?) -/);
+  return matched ? matched[1].replace(/\(.*\)/g, '').trim().toLowerCase().replace(/\s+/g, '_').replace(/\'/g, '') + '.mb' : "newfile.md"
 })
 const changed = computed(() => {
-    return model.value !== store.selected?.content;
+  return model.value !== store.selected?.content;
 })
 </script>
 
 <template>
-    <div class="flex justify-between w-full p-2">
-        <span class="text-lg font-bold flex-grow">{{ filename }} {{ changed ? '*' : '' }}</span>
-        <Button type="button" icon="pi pi-home" @click="home" class="mr-2" />
-        <Button type="button" icon="pi pi-replay" @click="reset" class="mr-2" />
-        <Button type="button" icon="pi pi-save" @click="save" class="mr-2" />
-        <Button type="button" icon="pi pi-trash" @click="deleteSong" class="mr-2" />
-    </div>
-    <pre ref="editor" class="w-full p-2 border-0" contenteditable="true" @input="updateContent">{{ content }}</pre>
+  <div class="flex justify-between w-full p-2">
+    <span class="text-lg font-bold flex-grow">{{ filename }} {{ changed ? '*' : '' }}</span>
+    <Button type="button" icon="pi pi-home" @click="home" class="mr-2"/>
+    <Button type="button" icon="pi pi-replay" @click="reset" class="mr-2"/>
+    <Button type="button" icon="pi pi-save" @click="save" class="mr-2"/>
+    <Button type="button" icon="pi pi-trash" @click="deleteSong" class="mr-2"/>
+  </div>
+  <pre ref="editor" class="w-full p-2 border-0" contenteditable="true" @input="updateContent">{{ content }}</pre>
 </template>
 
 <style scoped>
 [contenteditable]:focus {
-    outline: 0px solid transparent;
+  outline: 0px solid transparent;
 }
+
 .tabpanel .w-full {
-    width: 94vw !important;
+  width: 94vw !important;
 }
 </style>

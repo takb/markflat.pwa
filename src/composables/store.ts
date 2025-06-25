@@ -11,7 +11,8 @@ class Store {
     songbook: Song[] = []
     selected: Song | null = null
     view: string = ''
-    apiKey: string = ''
+    apiKeyRead: string = ''
+    apiKeyWrite: string = ''
     edit(id: number) {
         this.selectSong(id)
         this.view = 'edit'
@@ -20,11 +21,22 @@ class Store {
         this.selectSong(id)
         this.view = 'show'
     }
+    setContent(content: string) {
+        if (this.selected) {
+            const matched = content.match(/^#\w*(.+)\w*-\w*(.+)/);
+            if (matched) {
+                this.selected.title = matched[1].trim()
+                this.selected.artist = matched[2].trim()
+            }
+            this.selected.content = content
+        }
+    }
     selectSong(id: number) {
         const index = this.songbook.findIndex(song => song.id === id)
         this.selected = index !== -1 ? this.songbook[index] : null
     }
-    deleteSong(id: number) {
+    deleteSong() {
+        const id = this.selected?.id
         const index = this.songbook.findIndex(song => song.id === id)
         if (index !== -1) {
             this.songbook.splice(index, 1)
@@ -37,11 +49,13 @@ class Store {
     loadSongbook() {
         this.songbook = JSON.parse(localStorage.getItem("songbook") || '[]') 
     }
-    saveApiKey() {
-        localStorage.setItem("apiKey", this.apiKey)
+    saveApiKeys() {
+        localStorage.setItem("apiKeyRead", this.apiKeyRead)
+        localStorage.setItem("apiKeyWrite", this.apiKeyWrite)
     }
-    loadApiKey() {
-        this.apiKey = localStorage.getItem("apiKey") || ''
+    loadApiKeys() {
+        this.apiKeyRead = localStorage.getItem("apiKeyRead") || ''
+        this.apiKeyWrite = localStorage.getItem("apiKeyWrite") || ''
     }
     addSong() {
         this.selected = {
@@ -52,9 +66,19 @@ class Store {
         }
         this.view = 'edit'
     }
+    saveSong() {
+        if (!this.selected) return
+        const id = this.selected?.id
+        const index = this.songbook.findIndex(song => song.id === id)
+        if (index !== -1) {
+            this.songbook.splice(index, 1)
+        }
+        this.songbook.push(this.selected)
+        this.saveSongbook()
+    }
 }
 
 const store = reactive(new Store())
 store.loadSongbook()
-store.loadApiKey()
+store.loadApiKeys()
 export default store
