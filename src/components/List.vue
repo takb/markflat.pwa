@@ -15,7 +15,7 @@
     import useSizes from '../composables/sizes.ts'
 
     const toast = useToast();
-    const editMode = ref(true)
+    const editMode = ref(false)
     const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
     const menu = ref()
     const settings = ref(false);
