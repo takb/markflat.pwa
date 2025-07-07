@@ -5,7 +5,7 @@ interface MarkflatOptions extends ConverterOptions {
     mbTransposeBy?: number;
     mbTranspose?: (key: string, transposeBy: number) => string;
     mbAddStyle?: boolean;
-    mbAddMinorChordMarker?: boolean;
+    mbDetailedChordView?: boolean;
     useUnicodeAccidentals?: boolean;
 }
 
@@ -17,28 +17,45 @@ showdown.extension('markflat', (): ShowdownExtension[] => {
     };
     var elements = {
         type: 'lang',
-        filter: function (text: string, converter: Converter, options?: MarkflatOptions) {
+        filter: function (text: string, converter: Converter) {
             return text.replace(/~(.*?)[ \t]+([\s\S ]*?)(?=~|^\d+\. |^$)/mg, function(_match, block, content) {
                 var ret = '<ul><li list="'+block+'">'+converter.makeHtml(content).replace(/<\/?p>/g, '')+'</li></ul>';
                 return ret;
             });
         }
     };
+    var nbsp = {
+        type: 'lang',
+        regex: /==/g,
+        replace: '&nbsp;&nbsp;'
+    };
     var chords = {
         type: 'lang',
         filter: function (text: string, _converter: Converter, options?: MarkflatOptions) {
             return text.replace(/\{(.+?)\}(.)/g, function(_match: string, p1: string, p2: string) {
-                var chord = p1.replace(/^([a-gA-G][#b]?m?)(.*?)(?:\/([a-gA-G][#b]?))?$/g, function(_match, key = '', modifier = '', bass = '') {
+                var chord = p1.replace(/^([a-gA-G][#b+0]?m?)(.*?)(?:\/([a-gA-G][#b]?))?$/g, function(_match, key = '', modifier = '', bass = '') {
                     if (options && typeof options.mbTranspose == 'function' && options.mbTransposeBy != undefined && options.mbTransposeBy != 0) {
                         key = options.mbTranspose(key, options.mbTransposeBy);
                         bass = options.mbTranspose(bass, options.mbTransposeBy);
                     }
-                    key = options && options.mbAddMinorChordMarker ? key.replace(/^([a-g][#b]?(?!m))$/, '$1'.toUpperCase()+'m') : key;
+                    // Key 
+                    key = options && options.mbDetailedChordView ? 
+                      key.replace(/^([a-g][#b]?(?!m))$/, '$1'.toUpperCase()+'m')
+                        .replace(/0/g, 'dim')
+                        .replace(/\+/g, 'aug')
+                      : key;
                     if (options && options.useUnicodeAccidentals)
                         key = key.replace(/#/g, '\u266F').replace(/(?!^)b/g, '\u266D');
-                    modifier = modifier.replace(/(\d+)\+/g, 'maj$1').replace(/^.(2|4)$/g, 'sus$1');//.replace(/#/g, '\u266F').replace(/b/g, '\u266D');
+
+                    // Modifier
+                    modifier = modifier.replace(/(\d+)\+/g, 'maj$1').replace(/^.(2|4)$/g, 'sus$1')
+                    modifier = options && options.mbDetailedChordView ? modifier.replace(/^.0$/, '$1'.toUpperCase()+'m') : modifier;
                     if (options && options.useUnicodeAccidentals)
-                        bass = bass.replace(/#/g, '\u266F').replace(/([a-gA-G])b/g, '$1\u266D');
+                        modifier = modifier.replace(/#/g, '\u266F').replace(/b/g, '\u266D')
+
+                    // Bass 
+                    if (options && options.useUnicodeAccidentals)
+                        bass = bass.replace(/#/g, '\u266F').replace(/([a-gA-G])b/g, '$1\u266D')
                     return key+(modifier ? '<sup>'+modifier+'</sup>' : '')+(bass ? '<sub>/'+bass+'</sub>' : '');
                 });
                 var base = (p2 != '.') ? p2.replace(' ', '&nbsp;&nbsp;&nbsp;') : '';
@@ -63,7 +80,7 @@ showdown.extension('markflat', (): ShowdownExtension[] => {
             });
         }
     };
-    return [artist, elements, chords, styling];
+    return [artist, elements, nbsp, chords, styling];
 });
 
 showdown.setOption('mbTransposeBy', 0)
@@ -85,8 +102,8 @@ showdown.setOption('mbTranspose', function(key: string, transposeBy: number): st
         }
         return key;
     });
-showdown.setOption('useUnicodeAccidentals', false);
-showdown.setOption('mbAddMinorChordMarker', false);
+showdown.setOption('useUnicodeAccidentals', true);
+showdown.setOption('mbDetailedChordView', false);
 showdown.setOption('mbAddStyle', true);
 showdown.setOption('mbStyle', `<style>
     .mb {

@@ -30,6 +30,16 @@ const transposeDown = () => {
   md.setOption('mbTransposeBy', val)
   trigger.value++
 }
+const toggleDetailedChordView = () => {
+  const current = md.getOption('mbDetailedChordView')
+  md.setOption('mbDetailedChordView', !current)
+  trigger.value++
+}
+const toggleUseUnicodeAccidentals = () => {
+  const current = md.getOption('useUnicodeAccidentals')
+  md.setOption('useUnicodeAccidentals', !current)
+  trigger.value++
+}
 const items = [
   {
     label: 'Transpose up',
@@ -40,6 +50,16 @@ const items = [
     label: 'Transpose down',
     icon: 'pi pi-angle-left',
     command: transposeDown
+  },
+  {
+    label: 'Toggle detailed chord view',
+    icon: 'pi pi-sparkles',
+    command: toggleDetailedChordView
+  },
+  {
+    label: 'Toggle use Unicode accidentals',
+    icon: 'pi pi-hashtag',
+    command: toggleUseUnicodeAccidentals
   },
   {
     label: 'Return to list',

@@ -40,7 +40,6 @@ import {ref, toRaw} from "vue";
       <Show v-model="content"/>
     </SplitterPanel>
   </Splitter>
-  {{ content }}
 </template>
 
 <style scoped>
