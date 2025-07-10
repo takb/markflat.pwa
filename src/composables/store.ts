@@ -13,6 +13,7 @@ class Store {
     view: string = ''
     apiKeyRead: string = ''
     apiKeyWrite: string = ''
+    zoom: number = 1
     edit(id: number) {
         this.selectSong(id)
         this.view = 'edit'
