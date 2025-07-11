@@ -34,6 +34,5 @@ jobs:
         username: ${{ secrets.SFTP_USERNAME }}
         password: ${{ secrets.SFTP_PASSWORD }}
         local_path: './dist/*'
-        remote_path: '/var/www/html'
+        remote_path: ${{ secrets.SFTP_PATH }}
         sftp_only: true
-        delete_remote_files: true
