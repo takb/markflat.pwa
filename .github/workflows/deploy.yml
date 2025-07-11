@@ -1,0 +1,39 @@
+name: Build and Deploy to SFTP
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js 22
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'yarn'
+
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile
+
+    - name: Build project
+      run: yarn build --base /markflat/
+
+    - name: Copy PHP files to dist
+      run: cp *.php ./dist/ 2>/dev/null || echo "No PHP files found in root directory"
+
+    - name: Deploy to SFTP
+      uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      with:
+        server: ${{ secrets.SFTP_SERVER }}
+        username: ${{ secrets.SFTP_USERNAME }}
+        password: ${{ secrets.SFTP_PASSWORD }}
+        local_path: './dist/*'
+        remote_path: '/var/www/html'
+        sftp_only: true
+        delete_remote_files: true

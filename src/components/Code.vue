@@ -32,7 +32,7 @@ const save = () => {
     toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
   }
   store.saveSong()
-  fetch('https://www.genkidelic.de/songbook.php', {
+  fetch('https://www.genkidelic.de/markflat/songbook.php', {
       method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -69,7 +69,7 @@ const deleteSong = () => {
     toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
   }
   store.deleteSong()
-  fetch('https://www.genkidelic.de/songbook.php', {
+  fetch('https://www.genkidelic.de/markflat/songbook.php', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',

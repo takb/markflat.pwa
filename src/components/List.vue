@@ -48,7 +48,7 @@
         label: 'Download songbook',
         icon: 'pi pi-replay',
         command: () => {
-          fetch("https://www.genkidelic.de/songbook.php", {
+          fetch("https://www.genkidelic.de/markflat/songbook.php", {
               method: 'POST',
               headers: {
                 'Accept': 'application/json',

@@ -23,6 +23,7 @@ export default defineConfig({
         short_name: 'm♭',
         description: 'A pwa to manage, display and edit markflat files',
         theme_color: '#e91e63',
+        display: 'standalone',
       },
 
       workbox: {
