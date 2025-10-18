@@ -15,7 +15,7 @@
     import useSizes from '../composables/sizes.ts'
 
     const toast = useToast();
-    const editMode = ref(true)
+    const editMode = ref(false)
     const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
     const menu = ref()
     const settings = ref(false);
@@ -48,27 +48,38 @@
         label: 'Download songbook',
         icon: 'pi pi-replay',
         command: () => {
-          fetch("https://www.genkidelic.de/songbook.php")
-              .then(res => {
-                res.json().then(value => {
-                  store.songbook = []
-                  let id = 0
-                  value.forEach((song: any) => {
-                    store.songbook.push({
-                      id: id++,
-                      title: song.title,
-                      artist: song.artist,
-                      content: song.md
-                    })
+          fetch("https://www.genkidelic.de/markflat/songbook.php", {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: "key=" + store.apiKeyRead,
+            })
+            .then(res => {
+              res.json().then(value => {
+                if (value.status === 'error') {
+                  toast.add({ severity: value.status, summary: value.title, detail: value.message, life: 3000 })
+                  return
+                }
+                store.songbook = []
+                let id = 0
+                value.forEach((song: any) => {
+                  store.songbook.push({
+                    id: id++,
+                    title: song.title,
+                    artist: song.artist,
+                    content: song.md
                   })
-                  store.saveSongbook()
-                  toast.add({ severity: 'success', summary: 'Download completed', detail: 'Successfully imported ' + id + ' songs.', life: 3000 })
                 })
+                store.saveSongbook()
+                toast.add({ severity: 'success', summary: 'Download completed', detail: 'Successfully imported ' + id + ' songs.', life: 3000 })
               })
-              .catch(err => {
-                console.error(err)
-                toast.add({ severity: 'error', summary: 'Download failed', detail: 'Could not download songbook.', life: 3000 })
-              })
+            })
+            .catch(err => {
+              console.error(err)
+              toast.add({ severity: 'error', summary: 'Download failed', detail: 'Could not download songbook.', life: 3000 })
+            })
         }
       }
     ])
@@ -92,11 +103,11 @@
         <template #empty> No songs found. </template>
         <Column field="title" header="Title" class="p-2 flex-grow" sortable />
         <Column field="artist" header="Composer/Interpret" sortable />
-        <Column>
-            <template #header="_slotProps" v-if="editMode">
+        <Column v-if="editMode">
+            <template #header="_slotProps">
               <Button icon="pi pi-plus" rounded raised @click="() => store.addSong()" class="mr-2" />
             </template>
-            <template #body="slotProps" v-if="editMode">
+            <template #body="slotProps">
               <Button icon="pi pi-pencil" rounded raised @click="() => store.edit(slotProps.data.id)" class="mr-2" />
             </template>
         </Column>

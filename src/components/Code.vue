@@ -32,25 +32,32 @@ const save = () => {
     toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
   }
   store.saveSong()
-  fetch('https://www.genkidelic.de/songbook.php?store=' + filename.value + '&key=' + store.apiKeyWrite, {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({content: model.value})
-  })
-    .then(() => {
+  fetch('https://www.genkidelic.de/markflat/songbook.php', {
+      method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: "key=" + encodeURIComponent(store.apiKeyWrite) 
+          + "&store=" + encodeURIComponent(filename.value) 
+          + "&content=" + encodeURIComponent(model.value)
+    })
+    .then(async response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const result = await response.json()
+      console.log(result)
       toast.add({
-        severity: 'success',
-        summary: 'Save completed',
-        detail: 'Successfully saved ' + filename.value + '.',
+        severity: result.status,
+        summary: result.title,
+        detail: result.message,
         life: 3000
       })
     })
     .catch(err => {
       console.error(err)
-      toast.add({severity: 'error', summary: 'Delete failed', detail: 'Could not delete song.', life: 3000})
+      toast.add({severity: 'error', summary: 'Saving failed', detail: 'Could not save song file ' + filename.value + '.', life: 3000})
     })
 }
 const deleteSong = () => {
@@ -62,7 +69,15 @@ const deleteSong = () => {
     toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
   }
   store.deleteSong()
-  fetch('https://www.genkidelic.de/songbook.php?delete=' + filename.value + '&key=' + store.apiKeyWrite)
+  fetch('https://www.genkidelic.de/markflat/songbook.php', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: "key=" + encodeURIComponent(store.apiKeyWrite) 
+        + "&delete=" + encodeURIComponent(filename.value)
+    })
     .then(() => {
       toast.add({
         severity: 'success',
@@ -78,11 +93,17 @@ const deleteSong = () => {
 }
 const filename = computed(() => {
   const matched = model.value.match(/^# (.+?) -/);
-  return matched ? matched[1].replace(/\(.*\)/g, '').trim().toLowerCase().replace(/\s+/g, '_').replace(/\'/g, '') + '.mb' : "newfile.md"
+  return matched ? matched[1].replace(/\(.*\)/g, '').trim().toLowerCase().replace(/\s+/g, '_').replace(/\W+/g, '') + '.mb' : "newfile.md"
 })
 const changed = computed(() => {
   return model.value !== store.selected?.content;
 })
+const keyListener = (e: KeyboardEvent) => {
+  if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
+      save()
+      e.preventDefault()
+  }
+}
 </script>
 
 <template>
@@ -93,7 +114,7 @@ const changed = computed(() => {
     <Button type="button" icon="pi pi-save" @click="save" class="mr-2"/>
     <Button type="button" icon="pi pi-trash" @click="deleteSong" class="mr-2"/>
   </div>
-  <pre ref="editor" class="w-full p-2 border-0" contenteditable="true" @input="updateContent">{{ content }}</pre>
+  <pre ref="editor" class="w-full p-2 border-0" contenteditable="true" @input="updateContent" @keydown="keyListener">{{ content }}</pre>
 </template>
 
 <style scoped>
