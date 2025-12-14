@@ -24,7 +24,7 @@ class Store {
     }
     setContent(content: string) {
         if (this.selected) {
-            const matched = content.match(/^#\w*(.+)\w*-\w*(.+)/);
+            const matched = content.match(/^#\w*(.+)\w*-\w*(.+)( \(.+?\))?/);
             if (matched) {
                 this.selected.title = matched[1].trim()
                 this.selected.artist = matched[2].trim()
