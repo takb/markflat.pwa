@@ -2,7 +2,18 @@
 header('Content-Type: text/plain');
 $lock_file = __DIR__ . '/under_attack';
 $cf_zone = "be8b5ff3e3cb676840a2be26c19adef5";
-$cf_token = "dhrz4Q7Pj1p2hCfDkd7p888w0wsULtmlTRNW3WM8";
+// The API token lives outside the repo (public!): secrets/cloudflare.php, gitignored and not
+// deployed by CI -- place it on the server by hand:
+//   <?php return ['token' => '...'];
+// Token: Cloudflare -> My Profile -> API Tokens, limited to this zone with Zone Analytics:Read
+// and Zone Settings:Edit.
+$secrets_file = __DIR__ . '/secrets/cloudflare.php';
+$secrets = is_file($secrets_file) ? include $secrets_file : null;
+$cf_token = is_array($secrets) ? ($secrets['token'] ?? '') : '';
+if ($cf_token === '') {
+    echo "Missing Cloudflare API token: create " . $secrets_file . "\n";
+    exit(1);
+}
 $start_ts = date("c", strtotime("-1 day"));
 $end_ts = date("c");
 $limit = 1000;
