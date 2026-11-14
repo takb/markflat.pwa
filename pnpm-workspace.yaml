@@ -1,0 +1,8 @@
+# pnpm settings (pnpm 11+ reads them here, not from .npmrc). Not a monorepo: no `packages`.
+# Dependency install scripts run only where listed true. All of these ship their binary as a
+# separate per-platform package; their scripts only download or compile one when that package
+# is missing, so they are denied.
+allowBuilds:
+  '@tailwindcss/oxide': false
+  esbuild: false
+  sharp: false

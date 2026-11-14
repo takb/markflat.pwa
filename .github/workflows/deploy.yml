@@ -12,17 +12,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js 22
-      uses: actions/setup-node@v4
+    # pnpm in the version package.json pins ("packageManager"), Node 24, the store cached
+    # on the lockfile's hash, then `pnpm install --frozen-lockfile` (fails without a lockfile).
+    - name: Set up pnpm and Node.js 24, install dependencies
+      uses: pnpm/setup@v3
       with:
-        node-version: '22'
-        cache: 'yarn'
-
-    - name: Install dependencies
-      run: yarn install --frozen-lockfile
+        runtime: node@24
+        cache: true
+        require-lockfile: true
 
     - name: Build project
-      run: yarn build --base /markflat/
+      run: pnpm build --base /markflat/
 
     - name: Copy PHP files to dist
       run: cp *.php ./dist/ 2>/dev/null || echo "No PHP files found in root directory"
