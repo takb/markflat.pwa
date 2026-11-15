@@ -22,7 +22,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # pnpm in the version package.json pins ("packageManager"), Node 24, the store cached
       # on the lockfile's hash, then `pnpm install --frozen-lockfile` (fails without a lockfile).
