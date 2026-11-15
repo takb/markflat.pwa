@@ -18,6 +18,11 @@ if (strtolower($_SERVER['REQUEST_METHOD']) == 'options') {
     exit();
 }
 
+// The song folder: config.php (written by the deploy, outside the repo) names a folder outside
+// the webroot; without it (local development) the songs are in ./mb next to this script.
+$config = is_file(__DIR__.'/config.php') ? require __DIR__.'/config.php' : [];
+$dataDir = rtrim($config['data_dir'] ?? __DIR__.'/mb', '/').'/';
+
 $store_filename = $_POST['store'] ?? '';
 $delete_filename = $_POST['delete'] ?? '';
 $key = $_POST['key'] ?? '';
@@ -27,7 +32,7 @@ $WRITE_KEY = '$2y$12$1eWJ73da29FN03VRzfXEqO5a2FcsEFQVjksRhCP8sdx36cu5X8LT2';
 
 $ret = ['status' => 'error', 'title' => 'Invalid API call', 'message' => 'No action taken.'. $store_filename . ' ' . $delete_filename . ' ' . $key . ' ' . $content];
 if ($store_filename && $content && password_verify($key, $WRITE_KEY)) {
-    if (file_put_contents('./mb/'.$store_filename, $content)) {
+    if (file_put_contents($dataDir.$store_filename, $content)) {
         $ret = array(
             'status' => 'success',
             'title' => 'Song saved successfully',
@@ -41,8 +46,8 @@ if ($store_filename && $content && password_verify($key, $WRITE_KEY)) {
         );
     }
 } elseif ($delete_filename && password_verify($key, $WRITE_KEY)) {
-    if (file_exists('./mb/'.$delete_filename)) {
-        if (unlink('./mb/'.$delete_filename)) {
+    if (file_exists($dataDir.$delete_filename)) {
+        if (unlink($dataDir.$delete_filename)) {
             $ret = array(
                 'status' => 'success',
                 'message' => 'Song deleted successfully.',
@@ -60,12 +65,12 @@ if ($store_filename && $content && password_verify($key, $WRITE_KEY)) {
         );
     }
     exit();
-} elseif (password_verify($key, $READ_KEY) && $handle = opendir('./mb')) {
+} elseif (password_verify($key, $READ_KEY) && $handle = opendir($dataDir)) {
     $ret = array();
     while (false !== ($entry = readdir($handle))) {
         $finfo = pathinfo($entry);
         if ($finfo['extension'] == "mb") {
-            $md = file_get_contents('./mb/'.$entry);
+            $md = file_get_contents($dataDir.$entry);
             if (preg_match('/#(.+?) - (.+?)( \(.+?\))?\R.*/us', $md, $content) || true) {
                 array_push($ret, array(
                     'title' => trim($content[1]),
