@@ -26,3 +26,8 @@ dev-dist
 
 secrets
 config.php
+
+# Tests
+coverage
+test-results
+playwright-report

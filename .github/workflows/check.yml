@@ -1,0 +1,52 @@
+name: Check
+
+# Lint, type check, unit tests with coverage, build, browser tests, audit. Runs on pull requests
+# and on pushes to other branches; on main, deploy.yml runs it before deploying.
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up pnpm and Node.js 24, install dependencies
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      # The runner has PHP (songbook.php's syntax check and the browser tests' server).
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests with coverage
+        run: pnpm coverage
+
+      - name: Type check and build
+        run: pnpm build
+
+      - name: Install Chromium for the browser tests
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: pnpm e2e
+
+      - name: Keep the browser test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      # Runtime dependencies only; the showdown advisories are waived in pnpm-workspace.yaml.
+      - name: Audit
+        run: pnpm audit --prod

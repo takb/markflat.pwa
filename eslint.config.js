@@ -10,7 +10,7 @@ import globals from 'globals'
  * `vue/recommended` are formatting, not correctness, so they are off.
  */
 export default tseslint.config(
-  { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**'] },
+  { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'coverage/**', 'test-results/**', 'playwright-report/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...vue.configs['flat/recommended'],
@@ -42,7 +42,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['*.config.{js,ts}'],
+    files: ['*.config.{js,ts}', 'tests/**/*.ts'],
     languageOptions: { globals: { ...globals.node } },
   },
 )

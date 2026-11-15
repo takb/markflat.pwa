@@ -85,6 +85,7 @@ The renderer is a [showdown](https://github.com/showdown/showdown) extension:
 | `src/components/PWABadge.vue` | "ready offline" and "update available" prompt |
 | `songbook.php` | the server API (song folder from `config.php`, written by the deploy) |
 | `public/data/.htaccess` | locks the server's song folder against web access |
+| `tests/` | unit tests (`unit/`) and browser tests (`e2e/`) |
 | `yesterday.mb` | an example song |
 
 ## Development
@@ -95,11 +96,25 @@ pnpm dev        # Vite dev server on http://localhost:5173
 pnpm build      # type check (vue-tsc) + production build into dist/
 pnpm preview    # serve the production build locally
 pnpm lint       # ESLint, and php -l on songbook.php
-pnpm check      # lint, type check, build, and an audit of the runtime dependencies
+pnpm test       # unit tests (Vitest); pnpm coverage adds a coverage report
+pnpm e2e        # browser tests (Playwright) against the build; needs pnpm build and PHP
+pnpm check      # all of the above, the build and an audit of the runtime dependencies
 ```
 
 The service worker is disabled in dev mode. Use `pnpm build && pnpm preview` to try the PWA
 behaviour.
+
+### Tests
+
+- `tests/unit`: the markflat renderer, transposition and the store. The renderer tests pin
+  today's output (with golden HTML for `yesterday.mb` in `tests/unit/golden`), so a rewrite can
+  be checked against it. Known bugs have `it.fails` tests that state the intended output.
+- `tests/e2e`: a small browser smoke set (songbook download, song view, transposing, editing
+  and saving). `tests/e2e/serve.sh` serves the build with `songbook.php` under PHP's built-in
+  server, with two songs and test keys in a throwaway folder.
+
+The GitHub workflow `check.yml` runs `pnpm check`'s steps on every branch and pull request; the
+deploy runs them first and stops if any fails.
 
 ## Server API
 
@@ -119,7 +134,7 @@ characters removed). The app calls `songbook.php` next to itself; `VITE_API_URL`
 ## Deployment
 
 A GitHub Action ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) runs on every push
-to `main`. It builds the app, copies `songbook.php` next to it and syncs the result over SFTP to
+to `main`. After the checks pass (`check.yml`), it builds the app, copies `songbook.php` next to it and syncs the result over SFTP to
 markflat.laotravez.de with `rclone`. The songs live in `data/` next to `songbook.php` (the
 host's PHP cannot reach anything outside its webroot). The deploy names that folder in a
 generated `config.php`; `data/.htaccess` and a rewrite rule refuse every web request to it, and
@@ -132,14 +147,13 @@ The workflow lists the repository variable and secrets it needs.
 
 ## Status
 
-The app works, but it has had almost no changes since mid-2025. A modernisation is
-planned:
+The app works. A modernisation is under way: the tooling and dependencies are up to date and the
+tests and CI are in place (November 2026). Still to come:
 
-- update the tooling and dependencies
+- fix the renderer's known bugs while moving it to markdown-it
 - replace PrimeVue (from v5 its licence requires a key)
 - rewrite the backend with proper authentication and input handling
-- add tests and CI checks
-- move the app to a new host (markflat.laotravez.de)
+- open markflat.laotravez.de to the public (it is password-protected until then)
 
 ## Licence
 

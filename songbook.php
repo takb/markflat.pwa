@@ -18,8 +18,8 @@ if (strtolower($_SERVER['REQUEST_METHOD']) == 'options') {
     exit();
 }
 
-// The song folder: config.php (written by the deploy, outside the repo) names a folder outside
-// the webroot; without it (local development) the songs are in ./mb next to this script.
+// config.php (written by the deploy, or by the browser tests; never in the repo) names the song
+// folder and may replace the key hashes; without it the songs are in ./mb next to this script.
 $config = is_file(__DIR__.'/config.php') ? require __DIR__.'/config.php' : [];
 $dataDir = rtrim($config['data_dir'] ?? __DIR__.'/mb', '/').'/';
 
@@ -27,8 +27,8 @@ $store_filename = $_POST['store'] ?? '';
 $delete_filename = $_POST['delete'] ?? '';
 $key = $_POST['key'] ?? '';
 $content = $_POST['content'] ?? '';
-$READ_KEY = '$2y$12$GwYjJ3rqN5x7VhMSqvymIedFVpOitwi/Ek1sSmuUuJw9WmKfozo..';
-$WRITE_KEY = '$2y$12$1eWJ73da29FN03VRzfXEqO5a2FcsEFQVjksRhCP8sdx36cu5X8LT2';
+$READ_KEY = $config['read_key_hash'] ?? '$2y$12$GwYjJ3rqN5x7VhMSqvymIedFVpOitwi/Ek1sSmuUuJw9WmKfozo..';
+$WRITE_KEY = $config['write_key_hash'] ?? '$2y$12$1eWJ73da29FN03VRzfXEqO5a2FcsEFQVjksRhCP8sdx36cu5X8LT2';
 
 $ret = ['status' => 'error', 'title' => 'Invalid API call', 'message' => 'No action taken.'. $store_filename . ' ' . $delete_filename . ' ' . $key . ' ' . $content];
 if ($store_filename && $content && password_verify($key, $WRITE_KEY)) {
