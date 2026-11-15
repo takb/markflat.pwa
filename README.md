@@ -61,14 +61,15 @@ The renderer is a [showdown](https://github.com/showdown/showdown) extension:
 
 ## Stack
 
-- Vue 3 (`<script setup>`, TypeScript), Vite
-- PrimeVue 4 (Aura theme) and Tailwind CSS 4 (`tailwindcss-primeui`), PrimeIcons
+- Vue 3 (`<script setup>`, TypeScript 5.9), Vite 8
+- PrimeVue 4.5 (Aura theme, pinned: from v5 its licence requires a key) and Tailwind CSS 4 (`tailwindcss-primeui`), PrimeIcons
 - showdown for Markdown, `vue3-touch-events` for gestures
 - `vite-plugin-pwa` / Workbox for the service worker, manifest and icons (generated from
   `public/favicon.svg`)
 - Backend: one PHP file, [songbook.php](songbook.php), that stores songs as `.mb` files in a
   `mb/` folder next to it
-- pnpm (version pinned in `package.json`), Node.js 24
+- pnpm (version pinned in `package.json`), Node.js 24; ESLint with typescript-eslint and
+  eslint-plugin-vue
 
 ## Layout
 
@@ -93,6 +94,8 @@ pnpm install
 pnpm dev        # Vite dev server on http://localhost:5173
 pnpm build      # type check (vue-tsc) + production build into dist/
 pnpm preview    # serve the production build locally
+pnpm lint       # ESLint, and php -l on songbook.php
+pnpm check      # lint, type check, build, and an audit of the runtime dependencies
 ```
 
 The service worker is disabled in dev mode. Use `pnpm build && pnpm preview` to try the PWA
