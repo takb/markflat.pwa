@@ -1,0 +1,75 @@
+/* markflat song sheets: put the rendered HTML in an element with the class "mb". */
+
+.mb {
+  position: relative;
+}
+.mb h1 {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin: 0 0 0.5em 1em;
+  padding: 0.2em 0;
+}
+.mb-artist {
+  float: right;
+  font-size: 0.9em;
+  margin-right: 1em;
+}
+.mb ol {
+  list-style: decimal;
+}
+.mb ol,
+.mb > .mb-block {
+  margin: 0;
+  padding: 0 0 0 5em;
+}
+.mb li {
+  margin: 0 0 0.6em 0;
+  padding-left: 0.4em;
+  line-height: 1.2em;
+}
+.mb ol li::marker {
+  margin-right: 0.5em;
+}
+
+/* ~Label blocks: the label stands where a verse number would. Inside a verse the block is
+   indented like the verse's text, so its label lines up with the verse numbers. */
+.mb-block {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mb li .mb-block > li {
+  margin-top: 0.6em;
+  padding-left: 0;
+}
+.mb-block > li::marker {
+  content: attr(data-label) ' ';
+}
+.mb-block > li[data-label=''] {
+  list-style: none;
+}
+
+/* Chords sit above the character that follows them. */
+.mb .mb-has-chords {
+  line-height: 1.9em;
+}
+.mb-ca {
+  position: relative;
+}
+.mb-chord {
+  position: absolute;
+  font-size: 0.9em;
+  bottom: 0.6em;
+}
+.mb-chord,
+.mb-chord-inline {
+  font-weight: bold;
+  white-space: nowrap;
+}
+.mb-chord sup {
+  font-size: 0.6em;
+}
+.mb em {
+  font-style: normal;
+  text-decoration: underline;
+}

@@ -10,11 +10,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    include: ['tests/unit/**/*.spec.ts'],
+    include: ['tests/unit/**/*.spec.ts', 'packages/*/test/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
       // The components are covered by the browser tests (tests/e2e).
-      include: ['src/composables/**/*.ts'],
+      include: ['src/composables/**/*.ts', 'packages/*/src/**/*.ts'],
       reporter: ['text-summary', 'html'],
     },
   },

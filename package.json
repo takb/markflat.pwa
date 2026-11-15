@@ -18,9 +18,10 @@
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
     "@primevue/core": "4.5.5",
+    "markdown-it": "^15.0.3",
+    "markdown-it-markflat": "workspace:*",
     "primeicons": "^7.0.0",
     "primevue": "4.5.5",
-    "showdown": "^2.1.0",
     "vue": "^3.5.45",
     "vue3-touch-events": "^5.0.15"
   },
@@ -29,7 +30,6 @@
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^24.19.2",
-    "@types/showdown": "^2.0.6",
     "@vite-pwa/assets-generator": "^2.0.0",
     "@vitejs/plugin-vue": "^6.0.11",
     "@vitest/coverage-v8": "^5.1.0",

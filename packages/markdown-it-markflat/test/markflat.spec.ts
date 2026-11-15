@@ -1,22 +1,18 @@
+// @vitest-environment node
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import showdown from '@/composables/markflat'
+import MarkdownIt from 'markdown-it'
+import markflat from '../src/index.ts'
 
-// Characterisation tests: they pin what the showdown renderer produces today, so the port to
-// markdown-it (M4) can be checked against them. They are not a statement of what is right;
-// known bugs are listed separately, as `it.fails` tests of the intended output.
+// These began as characterisation tests of the old showdown renderer (markflat.pwa, 2026-11);
+// the snapshots now hold this plugin's output, reviewed against the old one.
 
 type Options = { transposeBy?: number, detailed?: boolean, unicode?: boolean }
-const render = (text: string, o: Options = {}) => {
-  const c = new showdown.Converter({ extensions: ['markflat'] })
-  c.setOption('mbAddStyle', false)
-  c.setOption('mbTransposeBy', o.transposeBy ?? 0)
-  c.setOption('mbDetailedChordView', o.detailed ?? false)
-  c.setOption('useUnicodeAccidentals', o.unicode ?? false)
-  return c.makeHtml(text)
-}
+const md = new MarkdownIt({ html: false }).use(markflat)
+const render = (text: string, o: Options = {}) =>
+  md.render(text, { transpose: o.transposeBy ?? 0, detailed: o.detailed ?? false, unicode: o.unicode ?? false })
 // The chord markup of one line, without the surrounding paragraph.
-const line = (text: string, o?: Options) => render(text, o).replace(/^<p>|<\/p>$/g, '')
+const line = (text: string, o?: Options) => render(text, o).replace(/^<p[^>]*>|<\/p>\n$/g, '')
 
 describe('chords', () => {
   const cases = [
@@ -38,7 +34,7 @@ describe('chords', () => {
         "{C7+}a": "<span class="mb-ca"><span class="mb-chord">C<sup>maj7</sup></span>a</span>",
         "{C} a": "<span class="mb-ca"><span class="mb-chord">C</span>&nbsp;&nbsp;&nbsp;</span>a",
         "{C}.": "<span class="mb-chord-inline">C</span>",
-        "{C}_a_": "<span class="mb-ca"><span class="mb-chord">C</span><em></span>a</em>",
+        "{C}_a_": "<span class="mb-ca"><span class="mb-chord">C</span></span><em>a</em>",
         "{C}a": "<span class="mb-ca"><span class="mb-chord">C</span>a</span>",
         "{C}a{G}b": "<span class="mb-ca"><span class="mb-chord">C</span>a</span><span class="mb-ca"><span class="mb-chord">G</span>b</span>",
         "{D/F#}a": "<span class="mb-ca"><span class="mb-chord">D<sub>/F#</sub></span>a</span>",
@@ -66,10 +62,10 @@ describe('chords', () => {
   it('renders the detailed chord view', () => {
     expect(['{a}a', '{C0}a', '{C+}a', '{a0}a', '{C7+}a'].map(c => line(c, { detailed: true }))).toMatchInlineSnapshot(`
       [
-        "<span class="mb-ca"><span class="mb-chord">am</span>a</span>",
+        "<span class="mb-ca"><span class="mb-chord">Am</span>a</span>",
         "<span class="mb-ca"><span class="mb-chord">Cdim</span>a</span>",
         "<span class="mb-ca"><span class="mb-chord">Caug</span>a</span>",
-        "<span class="mb-ca"><span class="mb-chord">adim</span>a</span>",
+        "<span class="mb-ca"><span class="mb-chord">Adim</span>a</span>",
         "<span class="mb-ca"><span class="mb-chord">C<sup>maj7</sup></span>a</span>",
       ]
     `)
@@ -79,9 +75,9 @@ describe('chords', () => {
       [
         "<span class="mb-ca"><span class="mb-chord">D</span>a</span>",
         "<span class="mb-ca"><span class="mb-chord">b</span>a</span>",
-        "<span class="mb-ca"><span class="mb-chord">E<sub>/G</sub></span>a</span>",
+        "<span class="mb-ca"><span class="mb-chord">E<sub>/G#</sub></span>a</span>",
         "<span class="mb-ca"><span class="mb-chord">F#<sup>7</sup></span>a</span>",
-        "<span class="mb-ca"><span class="mb-chord">Db</span>a</span>",
+        "<span class="mb-ca"><span class="mb-chord">C</span>a</span>",
       ]
     `)
   })
@@ -89,8 +85,14 @@ describe('chords', () => {
 
 describe('structure', () => {
   it('renders the heading with the artist', () => {
-    expect(render('# Song - Artist')).toMatchInlineSnapshot('"<h1 id="songspanclassmbartistartistspan">Song<span class="mb-artist">Artist</span></h1>"')
-    expect(render('# Song - Artist (Capo 2)')).toMatchInlineSnapshot('"<h1 id="songspanclassmbartistartistcapo2span">Song<span class="mb-artist">Artist (Capo 2)</span></h1>"')
+    expect(render('# Song - Artist')).toMatchInlineSnapshot(`
+      "<h1>Song<span class="mb-artist">Artist</span></h1>
+      "
+    `)
+    expect(render('# Song - Artist (Capo 2)')).toMatchInlineSnapshot(`
+      "<h1>Song<span class="mb-artist">Artist (Capo 2)</span></h1>
+      "
+    `)
   })
   it('renders a wide space', () => {
     expect(line('a==b')).toMatchInlineSnapshot('"a&nbsp;&nbsp;b"')
@@ -98,43 +100,41 @@ describe('structure', () => {
   it('renders numbered verses and labelled blocks', () => {
     expect(render('1. one  \n   two\n2. three\n   ~Ch {C}chorus line\n3. four')).toMatchInlineSnapshot(`
       "<ol>
-      <li>one<br />
+      <li>one<br>
       two</li>
-      <li><p>three</p></li>
-      </ol>
-      <ul><li class="mb-has-chords" list="Ch"><span class="mb-ca"><span class="mb-chord">C</span>c</span>horus line</li></ul>
-      <ol start="3">
+      <li>three<ul class="mb-block"><li data-label="Ch" class="mb-has-chords"><span class="mb-ca"><span class="mb-chord">C</span>c</span>horus line</li></ul>
+      </li>
       <li>four</li>
-      </ol>"
+      </ol>
+      "
     `)
   })
 })
 
 describe('yesterday.mb', () => {
   it('matches the golden HTML', async () => {
-    const text = readFileSync('yesterday.mb', 'utf8')
+    const text = readFileSync(new URL('./yesterday.mb', import.meta.url), 'utf8')
     await expect(render(text, { unicode: true })).toMatchFileSnapshot('golden/yesterday.html')
   })
   it('matches the golden HTML transposed by +3, detailed', async () => {
-    const text = readFileSync('yesterday.mb', 'utf8')
+    const text = readFileSync(new URL('./yesterday.mb', import.meta.url), 'utf8')
     await expect(render(text, { transposeBy: 3, detailed: true, unicode: true })).toMatchFileSnapshot('golden/yesterday-t3-detailed.html')
   })
 })
 
-// Known bugs (vault: markflat.pwa/Plan — modernisation, "Known bugs"), fixed in M4. Each test
-// states the intended output; when the fix lands it passes and `it.fails` must become `it`.
-describe('known bugs', () => {
-  it.fails('B8: the detailed view writes a minor chord with a capital root', () => {
+// Bugs of the old renderer (B8, B9, B16, B17 in the markflat.pwa plan), fixed here.
+describe('fixed bugs of the old renderer', () => {
+  it('B8: the detailed view writes a minor chord with a capital root', () => {
     expect(line('{a}a', { detailed: true })).toContain('>Am<')
   })
-  it.fails('B9: a repeat mark at the end of a line is rendered, not shown with its braces', () => {
+  it('B9: a repeat mark at the end of a line is rendered, not shown with its braces', () => {
     expect(line('a {:||}\nb')).not.toContain('{')
     expect(line('a {...}')).not.toContain('{')
   })
-  it.fails('B16: a flat chord transposes from its own root (Bb + 2 = C)', () => {
+  it('B16: a flat chord transposes from its own root (Bb + 2 = C)', () => {
     expect(line('{Bb}a', { transposeBy: 2 })).toContain('>C<')
   })
-  it.fails('B17: a chord over an emphasised syllable keeps the tags nested', () => {
+  it('B17: a chord over an emphasised syllable keeps the tags nested', () => {
     expect(line('{C}_a_')).not.toContain('<em></span>')
   })
 })

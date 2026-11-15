@@ -36,34 +36,20 @@ with a swipe, transpose it to your key.
    ~Coda {D}Mmm {D7}mmm {F}mmm {C}mmm…
 ```
 
-| Syntax | Meaning |
-|---|---|
-| `# Title - Artist` | heading. The artist is shown on the right. A trailing ` (…)`, for example the capo position, is not part of the artist name in the songbook list |
-| `1.`, `2.` … | numbered verses (a Markdown ordered list) |
-| `~Label text…` | a block labelled by the word after `~`, e.g. `~Ch` for a chorus or `~Coda`. It runs until the next `~`, numbered verse or blank line |
-| `{X}a` | chord `X` above the character that follows |
-| `{X}.` | chord `X` inline, with no syllable under it |
-| `{...}`, `{\|\|:}`, `{:\|\|}`, `{'}` | repeat, break and similar marks, placed like chords |
-| `==` | a wide space |
-| end a line with two spaces | line break inside a verse (standard Markdown) |
-| `_text_` | emphasis, shown underlined |
+Verses are numbered, `~Ch` labels a chorus, `{X}` puts chord X above the next character, and an
+uppercase root is major, a lowercase one minor. The full syntax, the transposition rules and the
+display options are in the plugin's README:
+[packages/markdown-it-markflat](packages/markdown-it-markflat/README.md).
 
-Chord notation: an **uppercase root is major, a lowercase root is minor** (`{a}` = A minor).
-`#`/`b` after the root are accidentals, and `/X` adds a bass note (`{D/F#}`). Whatever follows
-the root is set as a superscript (`{E7}`). A few spellings are rewritten: `7+` → maj7,
-`s2`/`s4` → sus2/sus4, and in the detailed chord view `0` → dim and `+` → aug.
-
-**Transposing** shifts every root and bass note. A chord written with `b` uses the flat scale,
-any other chord the sharp scale, and minor chords stay lowercase.
-
-The renderer is a [showdown](https://github.com/showdown/showdown) extension:
-[src/composables/markflat.ts](src/composables/markflat.ts).
+The renderer is a [markdown-it](https://github.com/markdown-it/markdown-it) plugin,
+[markdown-it-markflat](packages/markdown-it-markflat) (MIT), kept in this repository as a
+package of its own. Raw HTML in a song is shown as text, not run.
 
 ## Stack
 
 - Vue 3 (`<script setup>`, TypeScript 5.9), Vite 8
 - PrimeVue 4.5 (Aura theme, pinned: from v5 its licence requires a key) and Tailwind CSS 4 (`tailwindcss-primeui`), PrimeIcons
-- showdown for Markdown, `vue3-touch-events` for gestures
+- markdown-it with the markflat plugin, `vue3-touch-events` for gestures
 - `vite-plugin-pwa` / Workbox for the service worker, manifest and icons (generated from
   `public/favicon.svg`)
 - Backend: one PHP file, [songbook.php](songbook.php), that stores songs as `.mb` files in a
@@ -77,7 +63,8 @@ The renderer is a [showdown](https://github.com/showdown/showdown) extension:
 |---|---|
 | `src/App.vue` | switches between list, song and editor views |
 | `src/composables/store.ts` | the app state (songbook, selected song, view, API keys, zoom) and its persistence in `localStorage` |
-| `src/composables/markflat.ts` | the markflat renderer and transposition |
+| `src/composables/markdown.ts` | the markdown-it instance with the markflat plugin |
+| `packages/markdown-it-markflat/` | the plugin: the markflat syntax, chords, transposition, stylesheet, its tests |
 | `src/composables/sizes.ts` | the narrow/wide breakpoint |
 | `src/components/List.vue` | songbook table, search, menu (edit mode, settings for the API keys, download) |
 | `src/components/Show.vue` | song view: transpose, chord display options, zoom, gestures |
@@ -85,7 +72,7 @@ The renderer is a [showdown](https://github.com/showdown/showdown) extension:
 | `src/components/PWABadge.vue` | "ready offline" and "update available" prompt |
 | `songbook.php` | the server API (song folder from `config.php`, written by the deploy) |
 | `public/data/.htaccess` | locks the server's song folder against web access |
-| `tests/` | unit tests (`unit/`) and browser tests (`e2e/`) |
+| `tests/` | the app's unit tests (`unit/`) and browser tests (`e2e/`) |
 | `yesterday.mb` | an example song |
 
 ## Development
@@ -106,9 +93,9 @@ behaviour.
 
 ### Tests
 
-- `tests/unit`: the markflat renderer, transposition and the store. The renderer tests pin
-  today's output (with golden HTML for `yesterday.mb` in `tests/unit/golden`), so a rewrite can
-  be checked against it. Known bugs have `it.fails` tests that state the intended output.
+- `packages/markdown-it-markflat/test`: the renderer and transposition, with reference HTML for
+  `yesterday.mb` in `test/golden`.
+- `tests/unit`: the store. Known bugs have `it.fails` tests that state the intended output.
 - `tests/e2e`: a small browser smoke set (songbook download, song view, transposing, editing
   and saving). `tests/e2e/serve.sh` serves the build with `songbook.php` under PHP's built-in
   server, with two songs and test keys in a throwaway folder.
@@ -150,7 +137,6 @@ The workflow lists the repository variable and secrets it needs.
 The app works. A modernisation is under way: the tooling and dependencies are up to date and the
 tests and CI are in place (November 2026). Still to come:
 
-- fix the renderer's known bugs while moving it to markdown-it
 - replace PrimeVue (from v5 its licence requires a key)
 - rewrite the backend with proper authentication and input handling
 - open markflat.laotravez.de to the public (it is password-protected until then)

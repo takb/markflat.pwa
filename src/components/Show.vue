@@ -1,50 +1,33 @@
 <script setup lang="ts">
 import type { MenuItem } from 'primevue/menuitem'
-import showdown from '../composables/markflat'
+import { md } from '../composables/markdown'
 import store from '../composables/store.ts'
 import SpeedDial from 'primevue/speeddial'
 import {computed, ref} from 'vue'
 
 const model = defineModel({type: String, default: ''})
-const md = new showdown.Converter({extensions: ['markflat']})
-const trigger = ref(0)
-// The renderer's options (transposition, chord display) are not reactive: reading `trigger`
-// makes the HTML recompute whenever an option changes and bumps it.
-const html = computed(() => {
-  void trigger.value
-  return md.makeHtml(model.value)
-})
+const transpose = ref(0)
+const detailed = ref(false)
+const unicode = ref(true)
+const html = computed(() => md.render(model.value, {
+  transpose: transpose.value, detailed: detailed.value, unicode: unicode.value,
+}))
 const zoom = computed(() => {
   return {'zoom': store.zoom}
 })
 
+// One octave each way; a full octave is the original key again.
 const transposeUp = () => {
-  let val = md.getOption('mbTransposeBy')
-  val++
-  if (val > 11) {
-    val = 0
-  }
-  md.setOption('mbTransposeBy', val)
-  trigger.value++
+  transpose.value = transpose.value >= 11 ? 0 : transpose.value + 1
 }
 const transposeDown = () => {
-  let val = md.getOption('mbTransposeBy')
-  val--
-  if (val < -11) {
-    val = 0
-  }
-  md.setOption('mbTransposeBy', val)
-  trigger.value++
+  transpose.value = transpose.value <= -11 ? 0 : transpose.value - 1
 }
 const toggleDetailedChordView = () => {
-  const current = md.getOption('mbDetailedChordView')
-  md.setOption('mbDetailedChordView', !current)
-  trigger.value++
+  detailed.value = !detailed.value
 }
 const toggleUseUnicodeAccidentals = () => {
-  const current = md.getOption('useUnicodeAccidentals')
-  md.setOption('useUnicodeAccidentals', !current)
-  trigger.value++
+  unicode.value = !unicode.value
 }
 const swipe = (direction: string) => {
   if (direction === 'left') {
@@ -114,6 +97,6 @@ const items : MenuItem[] = [
 <template>
   <SpeedDial :model="items" direction="left" :style="{ position: 'absolute', right: '2em', bottom: '2em' }"
              :button-props="{ severity: 'help', rounded: true }" :tooltip-options="{ event: 'hover', position: 'top' }" />
-  <!-- eslint-disable-next-line vue/no-v-html -- the renderer's HTML; escaping it is M4 (markdown-it, html: false) -->
+  <!-- eslint-disable-next-line vue/no-v-html -- markdown-it with html: false escapes the song text -->
   <div v-touch:longtap="longtap" v-touch:swipe="swipe" class="h-full w-full p-2 mb" :style="zoom" v-html="html"></div>
 </template>

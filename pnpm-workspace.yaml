@@ -1,4 +1,8 @@
-# pnpm settings (pnpm 11+ reads them here, not from .npmrc). Not a monorepo: no `packages`.
+# pnpm settings (pnpm 11+ reads them here, not from .npmrc). The root is the app; the markdown-it
+# plugin is a package of its own (modernisation D8).
+packages:
+  - packages/*
+
 # Dependency install scripts run only where listed true. All of these ship their binary as a
 # separate per-platform package; their scripts only download or compile one when that package
 # is missing, so they are denied.
@@ -6,10 +10,3 @@ allowBuilds:
   '@tailwindcss/oxide': false
   esbuild: false
   sharp: false
-# showdown has no patched release for these; the renderer moves to markdown-it in M4
-# (vault: markflat.pwa/Plan — modernisation), which also drops this list.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-22g5-r2x5-97cx
-    - GHSA-cr32-g25g-vxjj
-    - GHSA-rmmh-p597-ppvv

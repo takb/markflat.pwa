@@ -1,0 +1,39 @@
+{
+  "name": "markdown-it-markflat",
+  "version": "0.1.0",
+  "description": "markdown-it plugin for markflat: song sheets with chords above the lyrics, transposable",
+  "keywords": [
+    "markdown-it-plugin",
+    "markdown-it",
+    "markdown",
+    "chords",
+    "lyrics",
+    "songbook",
+    "transpose"
+  ],
+  "license": "MIT",
+  "author": "Takara Baumbach",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/takb/markflat.pwa.git",
+    "directory": "packages/markdown-it-markflat"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./markflat.css": "./markflat.css"
+  },
+  "files": [
+    "src",
+    "markflat.css"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "peerDependencies": {
+    "markdown-it": ">=14"
+  },
+  "devDependencies": {
+    "markdown-it": "^15.0.3"
+  }
+}

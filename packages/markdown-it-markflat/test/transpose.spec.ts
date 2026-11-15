@@ -1,30 +1,29 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import showdown from '@/composables/markflat'
-
-const transpose = showdown.getOption('mbTranspose') as (key: string, by: number) => string
+import { transposeNote as transpose } from '../src/chords.ts'
 const roots = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B']
 
-describe('mbTranspose (characterisation of the current behaviour)', () => {
+describe('transposeNote', () => {
   it('shifts major roots', () => {
     const table = roots.map(k => k + ': ' + [-1, 1, 2, 5, 11].map(by => transpose(k, by)).join(' '))
     expect(table).toMatchInlineSnapshot(`
       [
         "C: B C# D F B",
-        "C#: B C# D F B",
-        "Db: Db Eb E G Db",
+        "C#: C D D# F# C",
+        "Db: C D Eb Gb C",
         "D: C# D# E G C#",
-        "D#: C# D# E G C#",
-        "Eb: Eb F Gb A Eb",
+        "D#: D E F G# D",
+        "Eb: D E F Ab D",
         "E: D# F F# A D#",
         "F: E F# G A# E",
-        "F#: E F# G A# E",
-        "Gb: Gb Ab A C Gb",
+        "F#: F G G# B F",
+        "Gb: F G Ab B F",
         "G: F# G# A C F#",
-        "G#: F# G# A C F#",
-        "Ab: Ab Bb B D Ab",
+        "G#: G A A# C# G",
+        "Ab: G A Bb Db G",
         "A: G# A# B D G#",
-        "A#: G# A# B D G#",
-        "Bb: Bb C Db E Bb",
+        "A#: A B C D# A",
+        "Bb: A B C Eb A",
         "B: A# C C# E A#",
       ]
     `)
@@ -34,21 +33,21 @@ describe('mbTranspose (characterisation of the current behaviour)', () => {
     expect(table).toMatchInlineSnapshot(`
       [
         "c: b c# d f b",
-        "c#: b c# d f b",
-        "db: db eb e g db",
+        "c#: c d d# f# c",
+        "db: c d eb gb c",
         "d: c# d# e g c#",
-        "d#: c# d# e g c#",
-        "eb: eb f gb a eb",
+        "d#: d e f g# d",
+        "eb: d e f ab d",
         "e: d# f f# a d#",
         "f: e f# g a# e",
-        "f#: e f# g a# e",
-        "gb: gb ab a c gb",
+        "f#: f g g# b f",
+        "gb: f g ab b f",
         "g: f# g# a c f#",
-        "g#: f# g# a c f#",
-        "ab: ab bb b d ab",
+        "g#: g a a# c# g",
+        "ab: g a bb db g",
         "a: g# a# b d g#",
-        "a#: g# a# b d g#",
-        "bb: bb c db e bb",
+        "a#: a b c d# a",
+        "bb: a b c eb a",
         "b: a# c c# e a#",
       ]
     `)
@@ -59,15 +58,13 @@ describe('mbTranspose (characterisation of the current behaviour)', () => {
   })
 })
 
-// B16 (found in M3): the root's accidental is cut off before the shift, so C#, Db, … transpose
-// as if they were C, D, …, and a trailing "m" or "+" in the key is lost. Fixed in M4; these
-// tests then pass and `it.fails` must become `it`.
-describe('mbTranspose: known bug B16', () => {
-  it.fails('shifts sharp roots from the sharp itself', () => {
+// B16 of the old renderer: the root's accidental was cut off before the shift.
+describe('transposeNote: sharps and flats (B16)', () => {
+  it('shifts sharp roots from the sharp itself', () => {
     expect(transpose('C#', 1)).toBe('D')
     expect(transpose('F#', -1)).toBe('F')
   })
-  it.fails('shifts flat roots from the flat itself', () => {
+  it('shifts flat roots from the flat itself', () => {
     expect(transpose('Db', 1)).toBe('D')
     expect(transpose('Bb', -1)).toBe('A')
   })
