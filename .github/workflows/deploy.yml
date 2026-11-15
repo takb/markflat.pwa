@@ -85,7 +85,10 @@ jobs:
           # rule below in case that file is ever missing.
           # The API's keys (hashes only). Without them the API answers every request with 401;
           # songbook.php (the old API, until the app moves over) keeps its own keys.
+          READ_KEY=$(printf '%s' "$READ_KEY" | tr -d '[:space:]')
           [ -n "$READ_KEY" ] || echo "::warning::secret MARKFLAT_READ_KEY_SHA256 is not set: the new API lets nobody in"
+          [ -z "$READ_KEY" ] || [[ "$READ_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo "::error::secret MARKFLAT_READ_KEY_SHA256 must be just the 64-character hash"; exit 1; }
+          export READ_KEY
           php -r '
             $writers = [];
             foreach (preg_split("/\R/", trim((string) getenv("WRITE_KEYS"))) as $line) {
