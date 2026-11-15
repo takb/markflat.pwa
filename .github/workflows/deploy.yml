@@ -45,8 +45,6 @@ jobs:
       #   MARKFLAT_SFTP_HOST, MARKFLAT_SFTP_USER, MARKFLAT_SFTP_PASS   the laotravez.de login
       #   MARKFLAT_WEBROOT    absolute path of the subdomain's webroot on the server (as
       #                       laotravez's SERVER_DIR, found with a one-off <?php echo __DIR__;)
-      #   MARKFLAT_DATA_DIR   absolute path of the song folder, OUTSIDE the webroot: not
-      #                       web-readable, and no sync below ever touches it
       #   MARKFLAT_HTPASSWD   the login line, made with
       #     gh secret set MARKFLAT_HTPASSWD --repo takb/markflat.pwa --body "markflat:$(openssl passwd -apr1)"
       # The paths are secrets, not variables, so they stay masked in this public repo's logs.
@@ -56,18 +54,20 @@ jobs:
         env:
           HTPASSWD: ${{ secrets.MARKFLAT_HTPASSWD }}
           WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
-          DATA_DIR: ${{ secrets.MARKFLAT_DATA_DIR }}
         run: |
           [ -n "$HTPASSWD" ] || { echo "::error::secret MARKFLAT_HTPASSWD is not set"; exit 1; }
           [ -n "$WEBROOT" ] || { echo "::error::secret MARKFLAT_WEBROOT is not set"; exit 1; }
-          [ -n "$DATA_DIR" ] || { echo "::error::secret MARKFLAT_DATA_DIR is not set"; exit 1; }
-          php -r 'echo "<?php return [\"data_dir\" => ", var_export(getenv("DATA_DIR"), true), "];\n";' > dist/config.php
+          # The songs live in data/ inside the webroot: the host's PHP sees nothing outside its
+          # own webroot. data/.htaccess (from public/) denies every request, and so does the
+          # rule below in case that file is ever missing.
+          printf '%s\n' "<?php return ['data_dir' => __DIR__.'/data'];" > dist/config.php
           printf '%s\n' "$HTPASSWD" > dist/.htpasswd
           # Plain http is redirected to https BEFORE any login, so the password never travels
           # unencrypted: the login is only required on https (the proxy header covers a host
           # that ends TLS in front of Apache). Check after a change: http -> 301, https -> 401.
           cat > dist/.htaccess <<EOF
           RewriteEngine On
+          RewriteRule ^data(/|$) - [F,L]
           RewriteCond %{HTTPS} !=on
           RewriteCond %{HTTP:X-Forwarded-Proto} !=https
           RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
@@ -80,8 +80,8 @@ jobs:
           EOF
 
       # rclone sync makes the webroot an exact copy of dist/: files the build no longer has are
-      # DELETED there. The songs are not in the webroot, so this never reaches them; the song
-      # folder is only created if missing. The host allows file transfer only: rclone must not run commands there (shell detection, md5sum), or
+      # DELETED there. The filters keep the songs out of that: of data/ only its .htaccess is
+      # synced, everything else in it is excluded, and excluded files are never deleted. The host allows file transfer only: rclone must not run commands there (shell detection, md5sum), or
       # the server drops the connection.
       - name: Sync to the server (SFTP)
         if: vars.DEPLOY_ENABLED == 'true'
@@ -90,20 +90,15 @@ jobs:
           SFTP_USER: ${{ secrets.MARKFLAT_SFTP_USER }}
           SFTP_PASS: ${{ secrets.MARKFLAT_SFTP_PASS }}
           WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
-          DATA_DIR: ${{ secrets.MARKFLAT_DATA_DIR }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          for v in SFTP_HOST SFTP_USER SFTP_PASS WEBROOT DATA_DIR; do
+          for v in SFTP_HOST SFTP_USER SFTP_PASS WEBROOT; do
             [ -n "${!v}" ] || { echo "::error::secret MARKFLAT_$v is not set"; exit 1; }
           done
           sudo apt-get -qq -y install rclone
           remote=(--sftp-host "$SFTP_HOST" --sftp-user "$SFTP_USER"
                   --sftp-pass "$(rclone obscure "$SFTP_PASS")"
                   --sftp-shell-type none --sftp-disable-hashcheck --retries 5)
-          flags=()
-          if [ "$DRY_RUN" = "true" ]; then
-            flags+=(--dry-run)
-          else
-            rclone mkdir ":sftp:$DATA_DIR" "${remote[@]}"
-          fi
+          flags=(--filter '+ /data/.htaccess' --filter '- /data/**')
+          [ "$DRY_RUN" = "true" ] && flags+=(--dry-run)
           rclone sync dist/ ":sftp:$WEBROOT" "${remote[@]}" --stats-one-line -v "${flags[@]}"

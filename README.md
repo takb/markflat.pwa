@@ -83,6 +83,7 @@ The renderer is a [showdown](https://github.com/showdown/showdown) extension:
 | `src/components/Editor.vue`, `Code.vue` | editor layout, text pane with save/reset/delete |
 | `src/components/PWABadge.vue` | "ready offline" and "update available" prompt |
 | `songbook.php` | the server API (song folder from `config.php`, written by the deploy) |
+| `public/data/.htaccess` | locks the server's song folder against web access |
 | `yesterday.mb` | an example song |
 
 ## Development
@@ -116,11 +117,12 @@ characters removed). The app calls `songbook.php` next to itself; `VITE_API_URL`
 
 A GitHub Action ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) runs on every push
 to `main`. It builds the app, copies `songbook.php` next to it and syncs the result over SFTP to
-markflat.laotravez.de with `rclone`. The songs live in a folder outside the webroot, which the
-deploy names in a generated `config.php`, so they are not web-readable and a deploy never touches
-them; they are not in the repository. Without `config.php` (local development) `songbook.php`
-uses `mb/` next to itself. A manual run is a dry run
-by default.
+markflat.laotravez.de with `rclone`. The songs live in `data/` next to `songbook.php` (the
+host's PHP cannot reach anything outside its webroot). The deploy names that folder in a
+generated `config.php`; `data/.htaccess` and a rewrite rule refuse every web request to it, and
+the sync leaves its contents alone, so a deploy never touches the songs. They are not in the
+repository. Without `config.php` (local development) `songbook.php` uses `mb/` next to itself.
+A manual run is a dry run by default.
 
 The new host is being set up: until the modernisation is done the site is password-protected.
 The workflow lists the repository variable and secrets it needs.
