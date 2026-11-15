@@ -12,6 +12,7 @@
     import Menu from 'primevue/menu'
 
     import store from '../composables/store.ts'
+    import { API_URL } from '../composables/api.ts'
     import useSizes from '../composables/sizes.ts'
 
     const toast = useToast();
@@ -48,7 +49,7 @@
         label: 'Download songbook',
         icon: 'pi pi-replay',
         command: () => {
-          fetch("https://www.genkidelic.de/markflat/songbook.php", {
+          fetch(API_URL, {
               method: 'POST',
               headers: {
                 'Accept': 'application/json',

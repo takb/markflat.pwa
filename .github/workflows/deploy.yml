@@ -1,38 +1,94 @@
-name: Build and Deploy to SFTP
+name: Build and deploy
 
+# main goes to markflat.laotravez.de. Until the switch-over at the end of the modernisation
+# (vault: markflat.pwa/Plan — modernisation) the whole site sits behind a password: the
+# current songbook.php is not fit for the open web, and it shares its webspace with
+# laotravez.de.
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only show what rclone would change on the server'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # pnpm in the version package.json pins ("packageManager"), Node 24, the store cached
-    # on the lockfile's hash, then `pnpm install --frozen-lockfile` (fails without a lockfile).
-    - name: Set up pnpm and Node.js 24, install dependencies
-      uses: pnpm/setup@v3
-      with:
-        runtime: node@24
-        cache: true
-        require-lockfile: true
+      # pnpm in the version package.json pins ("packageManager"), Node 24, the store cached
+      # on the lockfile's hash, then `pnpm install --frozen-lockfile` (fails without a lockfile).
+      - name: Set up pnpm and Node.js 24, install dependencies
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@24
+          cache: true
+          require-lockfile: true
 
-    - name: Build project
-      run: pnpm build --base /markflat/
+      # The site is the subdomain's root; the app calls songbook.php next to itself.
+      - name: Build
+        run: |
+          pnpm build
+          cp songbook.php dist/
 
-    - name: Copy PHP files to dist
-      run: cp *.php ./dist/ 2>/dev/null || echo "No PHP files found in root directory"
+      # Everything below needs the repository variable DEPLOY_ENABLED = "true" and these
+      # secrets (Settings -> Secrets and variables -> Actions); they are new names, so nothing
+      # here can reach the old genkidelic.de host:
+      #   MARKFLAT_SFTP_HOST, MARKFLAT_SFTP_USER, MARKFLAT_SFTP_PASS   the laotravez.de login
+      #   MARKFLAT_WEBROOT    absolute path of the subdomain's webroot on the server (as
+      #                       laotravez's SERVER_DIR, found with a one-off <?php echo __DIR__;)
+      #   MARKFLAT_HTPASSWD   the login line, made with
+      #     gh secret set MARKFLAT_HTPASSWD --repo takb/markflat.pwa --body "markflat:$(openssl passwd -apr1)"
+      # The path is a secret, not a variable, so it stays masked in this public repo's logs.
+      # Without the password the run stops rather than publish an open site.
+      - name: Password-protect the site
+        if: vars.DEPLOY_ENABLED == 'true'
+        env:
+          HTPASSWD: ${{ secrets.MARKFLAT_HTPASSWD }}
+          WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
+        run: |
+          [ -n "$HTPASSWD" ] || { echo "::error::secret MARKFLAT_HTPASSWD is not set"; exit 1; }
+          [ -n "$WEBROOT" ] || { echo "::error::secret MARKFLAT_WEBROOT is not set"; exit 1; }
+          printf '%s\n' "$HTPASSWD" > dist/.htpasswd
+          cat > dist/.htaccess <<EOF
+          AuthType Basic
+          AuthName "markflat"
+          AuthUserFile ${WEBROOT%/}/.htpasswd
+          Require valid-user
+          EOF
 
-    - name: Deploy to SFTP
-      uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-      with:
-        server: ${{ secrets.SFTP_SERVER }}
-        username: ${{ secrets.SFTP_USERNAME }}
-        password: ${{ secrets.SFTP_PASSWORD }}
-        local_path: './dist/*'
-        remote_path: ${{ secrets.SFTP_PATH }}
-        sftp_only: true
+      # rclone sync makes the webroot an exact copy of dist/: files the build no longer has are
+      # DELETED there -- except mb/, the songs, which only songbook.php writes. The host allows
+      # file transfer only: rclone must not run commands there (shell detection, md5sum), or
+      # the server drops the connection.
+      - name: Sync to the server (SFTP)
+        if: vars.DEPLOY_ENABLED == 'true'
+        env:
+          SFTP_HOST: ${{ secrets.MARKFLAT_SFTP_HOST }}
+          SFTP_USER: ${{ secrets.MARKFLAT_SFTP_USER }}
+          SFTP_PASS: ${{ secrets.MARKFLAT_SFTP_PASS }}
+          WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          for v in SFTP_HOST SFTP_USER SFTP_PASS WEBROOT; do
+            [ -n "${!v}" ] || { echo "::error::secret MARKFLAT_$v is not set"; exit 1; }
+          done
+          sudo apt-get -qq -y install rclone
+          remote=(--sftp-host "$SFTP_HOST" --sftp-user "$SFTP_USER"
+                  --sftp-pass "$(rclone obscure "$SFTP_PASS")"
+                  --sftp-shell-type none --sftp-disable-hashcheck --retries 5)
+          flags=(--exclude '/mb/**')
+          if [ "$DRY_RUN" = "true" ]; then
+            flags+=(--dry-run)
+          else
+            rclone mkdir ":sftp:${WEBROOT%/}/mb" "${remote[@]}"
+          fi
+          rclone sync dist/ ":sftp:$WEBROOT" "${remote[@]}" --stats-one-line -v "${flags[@]}"

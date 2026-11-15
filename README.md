@@ -109,13 +109,19 @@ write key. Users enter them in the app's settings, and the server keeps only the
 | `key=<write key>&delete=<file>.mb` | deletes a song |
 
 The app derives the file name from the song title (lowercase, spaces → `_`, other non-word
-characters removed). The API URL is currently hard-coded in the components.
+characters removed). The app calls `songbook.php` next to itself; `VITE_API_URL` overrides that
+(for example to point the dev server at a running backend).
 
 ## Deployment
 
 A GitHub Action ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) runs on every push
-to `main`. It builds with `--base /markflat/`, copies `songbook.php` into `dist/`, and uploads the
-result over SFTP. The songs live only on the server and are not part of the repository.
+to `main`. It builds the app, copies `songbook.php` next to it and syncs the result over SFTP to
+markflat.laotravez.de with `rclone`. The `mb/` folder is excluded, so the songs on the server are
+never touched by a deploy; they live only there, not in the repository. A manual run is a dry run
+by default.
+
+The new host is being set up: until the modernisation is done the site is password-protected.
+The workflow lists the repository variable and secrets it needs.
 
 ## Status
 
@@ -126,7 +132,7 @@ planned:
 - replace PrimeVue (from v5 its licence requires a key)
 - rewrite the backend with proper authentication and input handling
 - add tests and CI checks
-- move the app to a new host
+- move the app to a new host (markflat.laotravez.de)
 
 ## Licence
 

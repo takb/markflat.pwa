@@ -3,6 +3,7 @@ import {computed, ref} from 'vue'
 import {useToast} from 'primevue/usetoast';
 import Button from 'primevue/button'
 import store from '../composables/store'
+import {API_URL} from '../composables/api'
 
 const model = defineModel({type: String, default: ''})
 const toast = useToast();
@@ -32,7 +33,7 @@ const save = () => {
     toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
   }
   store.saveSong()
-  fetch('https://www.genkidelic.de/markflat/songbook.php', {
+  fetch(API_URL, {
       method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -69,7 +70,7 @@ const deleteSong = () => {
     toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
   }
   store.deleteSong()
-  fetch('https://www.genkidelic.de/markflat/songbook.php', {
+  fetch(API_URL, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
