@@ -28,4 +28,17 @@ echo json_encode([
     'sys_temp_dir' => sys_get_temp_dir(),
     'data_dir' => $check($dir),
     'data_dir_parent' => $check($dir ? dirname($dir) : null),
+    // What PHP sees above its webroot: directory names only, no file contents.
+    'visible' => (function () {
+        $out = [];
+        $p = __DIR__;
+        for ($i = 0; $i < 6 && $p !== '/'; $i++) {
+            $p = dirname($p);
+            $e = @scandir($p);
+            $out[$p] = $e === false ? 'unreadable'
+                : array_values(array_filter($e, fn ($n) => $n !== '.' && $n !== '..' && @is_dir("$p/$n")));
+        }
+        $out['home'] = getenv('HOME') ?: null;
+        return $out;
+    })(),
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
