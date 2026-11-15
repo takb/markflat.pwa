@@ -31,3 +31,7 @@ config.php
 coverage
 test-results
 playwright-report
+
+# Local secrets: never in this public repo
+*.env
+.write_keys
