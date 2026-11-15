@@ -21,7 +21,7 @@ jobs:
           cache: true
           require-lockfile: true
 
-      # PHP as on the host: songbook.php's syntax check, the browser tests' server, the API.
+      # PHP as on the host: the API, and the browser tests' server.
       - name: Set up PHP 8.5 and Composer
         uses: shivammathur/setup-php@v2
         with:

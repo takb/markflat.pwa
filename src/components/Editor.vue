@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, toRaw} from 'vue'
+  import { computed } from 'vue'
   import Tabs from 'primevue/tabs'
   import TabList from 'primevue/tablist'
   import Tab from 'primevue/tab'
@@ -8,12 +8,15 @@ import {ref, toRaw} from 'vue'
   import Splitter from 'primevue/splitter'
   import SplitterPanel from 'primevue/splitterpanel'
   import useSizes from '../composables/sizes.ts'
-  import store from '../composables/store.ts'
+  import { useSongbook } from '@/stores/songbook'
+  import { useUi } from '@/stores/ui'
   import Code from './Code.vue'
   import Show from './Show.vue'
 
   const sizes = useSizes()
-  const content = ref(toRaw(store.selected)?.content)
+  const songbook = useSongbook()
+  const ui = useUi()
+  const content = computed(() => (ui.selected && songbook.songs[ui.selected]?.content) || '')
   const panelCss = sizes.isMobile.value ? 'w-full h-full min-h-full p-2' : 'h-full w-1/2'
 </script>
 
@@ -25,19 +28,19 @@ import {ref, toRaw} from 'vue'
     </TabList>
     <TabPanels>
       <TabPanel value="0" :class="panelCss">
-        <Code v-model="content" />
+        <Code />
       </TabPanel>
       <TabPanel value="1">
-        <Show v-model="content" />
+        <Show :model-value="content" />
       </TabPanel>
     </TabPanels>
   </Tabs>
   <Splitter v-else class="h-full w-full">
     <SplitterPanel class="rounded-none">
-      <Code v-model="content" />
+      <Code />
     </SplitterPanel>
     <SplitterPanel>
-      <Show v-model="content" />
+      <Show :model-value="content" />
     </SplitterPanel>
   </Splitter>
 </template>

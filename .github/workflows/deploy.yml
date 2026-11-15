@@ -1,9 +1,8 @@
 name: Build and deploy
 
 # main goes to markflat.laotravez.de. Until the switch-over at the end of the modernisation
-# (vault: markflat.pwa/Plan — modernisation) the whole site sits behind a password: the
-# current songbook.php is not fit for the open web, and it shares its webspace with
-# laotravez.de.
+# (vault: markflat.pwa/Plan — modernisation) the whole site sits behind a password, on top of
+# the API's own keys.
 on:
   push:
     branches: [main]
@@ -44,13 +43,11 @@ jobs:
           tools: composer
           coverage: none
 
-      # The site is the subdomain's root; the app calls songbook.php next to itself. The new
-      # API (api/, backend v2) goes to api/: index.php and .htaccess served, its code in api/lib/
-      # denied to the web.
+      # The site is the subdomain's root; the API (api/) goes to api/: index.php and .htaccess
+      # served, its code in api/lib/ denied to the web.
       - name: Build
         run: |
           pnpm build
-          cp songbook.php dist/
           composer install --working-dir=api --no-dev --optimize-autoloader --no-interaction --no-progress
           mkdir -p dist/api/lib
           cp api/public/index.php api/public/.htaccess dist/api/
@@ -86,8 +83,7 @@ jobs:
           # The songs live in data/ inside the webroot: the host's PHP sees nothing outside its
           # own webroot. data/.htaccess (from public/) denies every request, and so does the
           # rule below in case that file is ever missing.
-          # The API's keys (hashes only). Without them the API answers every request with 401;
-          # songbook.php (the old API, until the app moves over) keeps its own keys.
+          # The API's keys (hashes only). Without them the API answers every request with 401.
           READ_KEY=$(printf '%s' "$READ_KEY" | tr -d '[:space:]')
           [ -n "$READ_KEY" ] || echo "::warning::secret MARKFLAT_READ_KEY_SHA256 is not set: the new API lets nobody in"
           [ -z "$READ_KEY" ] || [[ "$READ_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo "::error::secret MARKFLAT_READ_KEY_SHA256 must be just the 64-character hash"; exit 1; }

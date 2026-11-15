@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { MenuItem } from 'primevue/menuitem'
 import { md } from '../composables/markdown'
-import store from '../composables/store.ts'
+import { useSettings } from '@/stores/settings'
+import { useUi } from '@/stores/ui'
 import SpeedDial from 'primevue/speeddial'
 import {computed, ref} from 'vue'
 
 const model = defineModel({type: String, default: ''})
+const settings = useSettings()
+const ui = useUi()
 const transpose = ref(0)
 const detailed = ref(false)
 const unicode = ref(true)
@@ -13,7 +16,7 @@ const html = computed(() => md.render(model.value, {
   transpose: transpose.value, detailed: detailed.value, unicode: unicode.value,
 }))
 const zoom = computed(() => {
-  return {'zoom': store.zoom}
+  return {'zoom': settings.zoom}
 })
 
 // One octave each way; a full octave is the original key again.
@@ -37,16 +40,16 @@ const swipe = (direction: string) => {
   }
 }
 const longtap = () => {
-  store.view = 'list'
+  ui.home()
 }
 const zoomIn = () => {
-  store.zoom = Math.min(2, store.zoom + 0.1)
+  settings.zoom = Math.min(2, settings.zoom + 0.1)
 }
 const zoomOut = () => {
-  store.zoom = Math.max(0.5, store.zoom - 0.1)
+  settings.zoom = Math.max(0.5, settings.zoom - 0.1)
 }
 const zoomReset = () => {
-  store.zoom = 1
+  settings.zoom = 1
 }
 const items : MenuItem[] = [
   {
@@ -88,7 +91,7 @@ const items : MenuItem[] = [
     label: 'Return to list',
     icon: 'pi pi-home',
     command: () => {
-      store.view = 'list'
+      ui.home()
     },
   },
 ]

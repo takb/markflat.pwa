@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// Browser smoke tests (decision D9) against the production build and the real songbook.php.
+// Browser smoke tests (decision D9) against the production build and the real API (api/).
 // @playwright/test is pinned to the version of the container's browsers (.devcontainer).
 export default defineConfig({
   testDir: 'tests/e2e',

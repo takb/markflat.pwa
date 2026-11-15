@@ -52,8 +52,8 @@ package of its own. Raw HTML in a song is shown as text, not run.
 - markdown-it with the markflat plugin, `vue3-touch-events` for gestures
 - `vite-plugin-pwa` / Workbox for the service worker, manifest and icons (generated from
   `public/favicon.svg`)
-- Backend: one PHP file, [songbook.php](songbook.php), that stores songs as `.mb` files in a
-  `mb/` folder next to it
+- Pinia for the app's state
+- Backend: [api/](api), plain PHP 8 that stores songs as `.mb` files
 - pnpm (version pinned in `package.json`), Node.js 24; ESLint with typescript-eslint and
   eslint-plugin-vue
 
@@ -61,17 +61,20 @@ package of its own. Raw HTML in a song is shown as text, not run.
 
 | Path | What |
 |---|---|
-| `src/App.vue` | switches between list, song and editor views |
-| `src/composables/store.ts` | the app state (songbook, selected song, view, API keys, zoom) and its persistence in `localStorage` |
+| `src/App.vue` | switches between list, song, editor and key views; the conflict dialog |
+| `src/stores/songbook.ts` | the songbook (Pinia): songs by name, kept in `localStorage`; download merges, save/delete/rename on the server, conflicts |
+| `src/stores/settings.ts`, `ui.ts` | the key and who it belongs to, zoom; the current view and song |
+| `src/api/client.ts` | the API client (`X-Api-Key`, ETags, errors) |
+| `src/lib/` | the merge rules, the heading parser and file names, safe `localStorage` |
 | `src/composables/markdown.ts` | the markdown-it instance with the markflat plugin |
 | `packages/markdown-it-markflat/` | the plugin: the markflat syntax, chords, transposition, stylesheet, its tests |
 | `src/composables/sizes.ts` | the narrow/wide breakpoint |
-| `src/components/List.vue` | songbook table, search, menu (edit mode, settings for the API keys, download) |
+| `src/components/List.vue` | songbook table, search, menu (edit mode, settings for the key, download, upload, keys) |
 | `src/components/Show.vue` | song view: transpose, chord display options, zoom, gestures |
-| `src/components/Editor.vue`, `Code.vue` | editor layout, text pane with save/reset/delete |
+| `src/components/Editor.vue`, `Code.vue` | editor layout, text pane with save/undo/delete |
+| `src/components/Keys.vue`, `ConflictDialog.vue` | key management (admin only); both versions of a song changed on both sides |
 | `src/components/PWABadge.vue` | "ready offline" and "update available" prompt |
 | `api/` | the server API (backend v2): front controller in `public/`, code in `src/`, tests in `tests/` |
-| `songbook.php` | the old server API, used by the app until it moves to `api/` |
 | `public/data/.htaccess` | locks the server's song folder against web access |
 | `tests/` | the app's unit tests (`unit/`) and browser tests (`e2e/`) |
 | `yesterday.mb` | an example song |
@@ -83,11 +86,17 @@ pnpm install
 pnpm dev        # Vite dev server on http://localhost:5173
 pnpm build      # type check (vue-tsc) + production build into dist/
 pnpm preview    # serve the production build locally
-pnpm lint       # ESLint, and php -l on songbook.php
+pnpm lint       # ESLint
+pnpm api        # the API's checks (php-cs-fixer, PHPStan, PHPUnit)
 pnpm test       # unit tests (Vitest); pnpm coverage adds a coverage report
 pnpm e2e        # browser tests (Playwright) against the build; needs pnpm build and PHP
 pnpm check      # all of the above, the build and an audit of the runtime dependencies
 ```
+
+For a local API, copy `api/dev/config.example.php` to `api/dev/config.php`, create
+`api/dev/data/` with a few `.mb` files, run `composer install` in `api/`, then `pnpm dev:api` next
+to `pnpm dev`; the dev server forwards `/api` to it. The example's keys are `dev-read` and
+`dev-admin`.
 
 The service worker is disabled in dev mode. Use `pnpm build && pnpm preview` to try the PWA
 behaviour.
@@ -98,7 +107,7 @@ behaviour.
   `yesterday.mb` in `test/golden`.
 - `tests/unit`: the store. Known bugs have `it.fails` tests that state the intended output.
 - `tests/e2e`: a small browser smoke set (songbook download, song view, transposing, editing
-  and saving). `tests/e2e/serve.sh` serves the build with `songbook.php` under PHP's built-in
+  and saving). `tests/e2e/serve.sh` serves the build and the API under PHP's built-in
   server, with two songs and test keys in a throwaway folder.
 
 The GitHub workflow `check.yml` runs `pnpm check`'s steps on every branch and pull request; the
@@ -145,18 +154,16 @@ cd api && composer install
 composer check   # php-cs-fixer, PHPStan (level 8), PHPUnit
 ```
 
-Until the app moves to the new API, it still uses the old `songbook.php` (form posts with the old
-keys).
 
 ## Deployment
 
 A GitHub Action ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)) runs on every push
-to `main`. After the checks pass (`check.yml`), it builds the app, copies `songbook.php` next to it and syncs the result over SFTP to
-markflat.laotravez.de with `rclone`. The songs live in `data/` next to `songbook.php` (the
+to `main`. After the checks pass (`check.yml`), it builds the app and the API and syncs the result over SFTP to
+markflat.laotravez.de with `rclone`. The songs live in `data/` in the webroot (the
 host's PHP cannot reach anything outside its webroot). The deploy names that folder in a
 generated `config.php`; `data/.htaccess` and a rewrite rule refuse every web request to it, and
 the sync leaves its contents alone, so a deploy never touches the songs. They are not in the
-repository. Without `config.php` (local development) `songbook.php` uses `mb/` next to itself.
+repository.
 A manual run is a dry run by default.
 
 The new host is being set up: until the modernisation is done the site is password-protected.

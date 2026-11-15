@@ -7,20 +7,22 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint . && php -l songbook.php",
+    "lint": "eslint .",
     "typecheck": "vue-tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "check": "pnpm lint && pnpm api && pnpm build && pnpm coverage && pnpm e2e && pnpm audit --prod",
-    "api": "composer --working-dir=api check"
+    "api": "composer --working-dir=api check",
+    "dev:api": "MARKFLAT_CONFIG=api/dev/config.php php -S 127.0.0.1:8090 api/public/index.php"
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
     "@primevue/core": "4.5.5",
     "markdown-it": "^15.0.3",
     "markdown-it-markflat": "workspace:*",
+    "pinia": "^4.1.0",
     "primeicons": "^7.0.0",
     "primevue": "4.5.5",
     "vue": "^3.5.45",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@pinia/testing": "^2.0.2",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^24.19.2",

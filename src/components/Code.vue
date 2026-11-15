@@ -1,119 +1,95 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {useToast} from 'primevue/usetoast'
+import { computed, ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
-import store from '../composables/store'
-import {API_URL} from '../composables/api'
+import Dialog from 'primevue/dialog'
+import { ApiError } from '@/api/client'
+import { useSettings } from '@/stores/settings'
+import { useSongbook } from '@/stores/songbook'
+import { useUi } from '@/stores/ui'
 
-const model = defineModel({type: String, default: ''})
+// The text pane. The <pre> gets its text once (and on reset); typing updates the store, so
+// re-rendering never moves the caret.
 const toast = useToast()
-const content = ref(model.value)
-const editor = ref()
+const settings = useSettings()
+const songbook = useSongbook()
+const ui = useUi()
+const editor = ref<HTMLPreElement>()
+const confirmDelete = ref(false)
+const song = computed(() => (ui.selected ? songbook.songs[ui.selected] : undefined))
+const initial = song.value?.content ?? ''
+const changed = computed(() => (ui.selected ? songbook.changed(ui.selected) : false))
+const isNew = computed(() => song.value?.etag === null)
+
 const updateContent = (event: Event) => {
-  const target = event.target as HTMLPreElement
-  model.value = target.innerText
-  store.setContent(target.innerText)
-}
-const home = () => {
-  if (content.value.trim() !== store.selected?.content.trim()) {
-    console.warn('Content has changed, but not saved. Returning to list view.')
-  }
-  store.view = 'list'
+  if (ui.selected) songbook.setContent(ui.selected, (event.target as HTMLPreElement).innerText)
 }
 const reset = () => {
-  if (store.selected) {
-    model.value = store.selected.content
-    editor.value.innerText = store.selected.content
-  }
+  if (!ui.selected) return
+  songbook.reset(ui.selected)
+  if (editor.value && song.value) editor.value.innerText = song.value.content
 }
-const save = () => {
-  if (!store.apiKeyWrite) {
-    toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
-  }
-  store.saveSong()
-  fetch(API_URL, {
-      method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'key=' + encodeURIComponent(store.apiKeyWrite) 
-          + '&store=' + encodeURIComponent(filename.value) 
-          + '&content=' + encodeURIComponent(model.value),
-    })
-    .then(async response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok')
-      }
-      const result = await response.json()
-      console.log(result)
+const save = async () => {
+  if (!ui.selected) return
+  try {
+    const r = await songbook.save(ui.selected)
+    ui.selected = r.slug
+    if (r.status === 'saved') {
+      toast.add({ severity: 'success', summary: 'Saved', detail: (song.value?.title || r.slug) + ' is on the server.', life: 3000 })
+    } else if (r.status === 'local') {
       toast.add({
-        severity: result.status,
-        summary: result.title,
-        detail: result.message,
-        life: 3000,
+        severity: 'warn',
+        summary: 'Saved on this device only',
+        detail: settings.key ? 'The server could not be reached; upload later from the menu.' : 'No key is set: enter your write key in the settings.',
+        life: 5000,
       })
-    })
-    .catch(err => {
-      console.error(err)
-      toast.add({severity: 'error', summary: 'Saving failed', detail: 'Could not save song file ' + filename.value + '.', life: 3000})
-    })
-}
-const deleteSong = () => {
-  if (changed.value) {
-    toast.add({severity: 'error', summary: 'Delete failed', detail: 'To delete a song click the button without changing the file content.', life: 3000})
-    return
+    }
+  } catch (e) {
+    const detail = e instanceof ApiError
+      ? (e.status === 403 ? 'Your key can only read.' : e.status === 401 ? 'The key was not accepted.' : e.message)
+      : String(e)
+    toast.add({ severity: 'error', summary: 'Not saved', detail, life: 5000 })
   }
-  if (!store.apiKeyWrite) {
-    toast.add({severity: 'warn', summary: 'Deleting locally', detail: 'No API key configured with write access.', life: 3000})
-  }
-  store.deleteSong()
-  fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: 'key=' + encodeURIComponent(store.apiKeyWrite) 
-        + '&delete=' + encodeURIComponent(filename.value),
-    })
-    .then(() => {
-      toast.add({
-        severity: 'success',
-        summary: 'Delete completed',
-        detail: 'Successfully deleted ' + filename.value + '.',
-        life: 3000,
-      })
-    })
-    .catch(err => {
-      console.error(err)
-      toast.add({severity: 'error', summary: 'Delete failed', detail: 'Could not delete song.', life: 3000})
-    })
 }
-const filename = computed(() => {
-  const matched = model.value.match(/^# (.+?) -/)
-  return matched ? matched[1].replace(/\(.*\)/g, '').trim().toLowerCase().replace(/\s+/g, '_').replace(/\W+/g, '') + '.mb' : 'newfile.md'
-})
-const changed = computed(() => {
-  return model.value !== store.selected?.content
-})
+const deleteSong = async () => {
+  confirmDelete.value = false
+  if (!ui.selected) return
+  const title = song.value?.title || ui.selected
+  try {
+    await songbook.remove(ui.selected)
+    ui.home()
+    toast.add({ severity: 'success', summary: 'Deleted', detail: title + ' was deleted. The server keeps a copy.', life: 4000 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Not deleted', detail: e instanceof ApiError ? e.message : String(e), life: 5000 })
+  }
+}
 const keyListener = (e: KeyboardEvent) => {
   if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
-      save()
-      e.preventDefault()
+    e.preventDefault()
+    save()
   }
 }
 </script>
 
 <template>
   <div class="flex justify-between w-full p-2">
-    <span class="text-lg font-bold flex-grow">{{ filename }} {{ changed ? '*' : '' }}</span>
-    <Button type="button" icon="pi pi-home" class="mr-2" @click="home" />
-    <Button type="button" icon="pi pi-replay" class="mr-2" @click="reset" />
-    <Button type="button" icon="pi pi-save" class="mr-2" @click="save" />
-    <Button type="button" icon="pi pi-trash" class="mr-2" @click="deleteSong" />
+    <span class="text-lg font-bold flex-grow">
+      {{ song?.title || ui.selected }}<span v-if="changed" title="Changed, not on the server yet"> *</span>
+      <span v-if="isNew" class="text-sm font-normal"> (new)</span>
+    </span>
+    <Button type="button" icon="pi pi-home" class="mr-2" aria-label="Back to the list" @click="ui.home()" />
+    <Button type="button" icon="pi pi-replay" class="mr-2" aria-label="Undo changes" :disabled="!changed || isNew" @click="reset" />
+    <Button type="button" icon="pi pi-save" class="mr-2" aria-label="Save" @click="save" />
+    <Button type="button" icon="pi pi-trash" class="mr-2" aria-label="Delete" @click="confirmDelete = true" />
   </div>
-  <pre ref="editor" class="w-full p-2 border-0" contenteditable="true" @input="updateContent" @keydown="keyListener">{{ content }}</pre>
+  <pre ref="editor" class="w-full p-2 border-0" contenteditable="true" @input="updateContent" @keydown="keyListener">{{ initial }}</pre>
+  <Dialog v-model:visible="confirmDelete" modal header="Delete this song?" :style="{ width: '24rem' }">
+    <p class="mb-4">{{ song?.title || ui.selected }} will be deleted{{ isNew ? '' : ' here and on the server (which keeps a copy)' }}.</p>
+    <div class="flex justify-end gap-2">
+      <Button label="Cancel" severity="secondary" @click="confirmDelete = false" />
+      <Button label="Delete" severity="danger" @click="deleteSong" />
+    </div>
+  </Dialog>
 </template>
 
 <style scoped>

@@ -40,6 +40,13 @@ export default defineConfig({
       },
     }),
   ],
+  // `pnpm dev:api` serves the API locally (api/dev/config.example.php); the dev server
+  // forwards /api to it, as the host's api/.htaccess does.
+  server: {
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8090', rewrite: path => path.replace(/^\/api/, '') },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
