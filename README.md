@@ -70,7 +70,8 @@ package of its own. Raw HTML in a song is shown as text, not run.
 | `src/components/Show.vue` | song view: transpose, chord display options, zoom, gestures |
 | `src/components/Editor.vue`, `Code.vue` | editor layout, text pane with save/reset/delete |
 | `src/components/PWABadge.vue` | "ready offline" and "update available" prompt |
-| `songbook.php` | the server API (song folder from `config.php`, written by the deploy) |
+| `api/` | the server API (backend v2): front controller in `public/`, code in `src/`, tests in `tests/` |
+| `songbook.php` | the old server API, used by the app until it moves to `api/` |
 | `public/data/.htaccess` | locks the server's song folder against web access |
 | `tests/` | the app's unit tests (`unit/`) and browser tests (`e2e/`) |
 | `yesterday.mb` | an example song |
@@ -105,18 +106,39 @@ deploy runs them first and stops if any fails.
 
 ## Server API
 
-`songbook.php` takes `POST` form data. Access is controlled by two shared keys: a read key and a
-write key. Users enter them in the app's settings, and the server keeps only their bcrypt hashes.
+The backend is in [api/](api): plain PHP 8 with Composer autoloading and no framework, served at
+`/api/`. Songs are `.mb` files in one folder. Every change keeps the previous version (the
+newest 20 per song), and a deleted song can be brought back.
+
+Every request needs a key in the `X-Api-Key` header. One shared **read key** reads; each writer
+has their own **write key**, which also reads, and is recorded with every change. The server keeps
+only SHA-256 hashes of the keys (`php api/bin/new-key.php <name>` makes a key and its hash).
+Ten wrong keys from one address within ten minutes lock that address out for the rest of the
+ten minutes.
 
 | Request | Effect |
 |---|---|
-| `key=<read key>` | returns every song as JSON: `[{title, artist, md}]` |
-| `key=<write key>&store=<file>.mb&content=…` | creates or overwrites a song |
-| `key=<write key>&delete=<file>.mb` | deletes a song |
+| `GET /me` | whose key it is: `{writer, canWrite}` |
+| `GET /songs` | all songs: `{songs: [{slug, title, artist, etag, content}]}` |
+| `GET /songs/{slug}` | one song, with its `ETag` |
+| `PUT /songs/{slug}` `{content}` | creates a song, or replaces it with `If-Match: <ETag>` |
+| `DELETE /songs/{slug}` | deletes it (`If-Match`) |
+| `POST /songs/{slug}/rename` `{to}` | renames it with its history (`If-Match`) |
+| `GET /songs/{slug}/revisions` | its old versions, newest first |
+| `GET /songs/{slug}/revisions/{id}` | one old version's content |
+| `POST /songs/{slug}/revisions/{id}/restore` | makes it current again (`If-Match`, unless the song was deleted) |
+| `GET /deleted` | deleted songs that can be restored |
 
-The app derives the file name from the song title (lowercase, spaces → `_`, other non-word
-characters removed). The app calls `songbook.php` next to itself; `VITE_API_URL` overrides that
-(for example to point the dev server at a running backend).
+A change based on an outdated copy is refused with `412`, never silently overwritten. New song
+names use `a–z`, `0–9`, `_` and `-`. A song may be at most 100 KB.
+
+```sh
+cd api && composer install
+composer check   # php-cs-fixer, PHPStan (level 8), PHPUnit
+```
+
+Until the app moves to the new API, it still uses the old `songbook.php` (form posts with the old
+keys).
 
 ## Deployment
 
@@ -135,10 +157,11 @@ The workflow lists the repository variable and secrets it needs.
 ## Status
 
 The app works. A modernisation is under way: the tooling and dependencies are up to date and the
-tests and CI are in place (November 2026). Still to come:
+tests and CI are in place, the renderer is a markdown-it plugin and the new backend is written
+(November 2026). Still to come:
 
+- move the app onto the new backend (`api/`)
 - replace PrimeVue (from v5 its licence requires a key)
-- rewrite the backend with proper authentication and input handling
 - open markflat.laotravez.de to the public (it is password-protected until then)
 
 ## Licence

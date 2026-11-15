@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "check": "pnpm lint && pnpm build && pnpm coverage && pnpm e2e && pnpm audit --prod"
+    "check": "pnpm lint && pnpm api && pnpm build && pnpm coverage && pnpm e2e && pnpm audit --prod",
+    "api": "composer --working-dir=api check"
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",

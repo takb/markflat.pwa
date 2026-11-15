@@ -37,11 +37,25 @@ jobs:
           cache: true
           require-lockfile: true
 
-      # The site is the subdomain's root; the app calls songbook.php next to itself.
+      - name: Set up PHP 8.5 (as on the host) and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer
+          coverage: none
+
+      # The site is the subdomain's root; the app calls songbook.php next to itself. The new
+      # API (api/, backend v2) goes to api/: index.php and .htaccess served, its code in api/lib/
+      # denied to the web.
       - name: Build
         run: |
           pnpm build
           cp songbook.php dist/
+          composer install --working-dir=api --no-dev --optimize-autoloader --no-interaction --no-progress
+          mkdir -p dist/api/lib
+          cp api/public/index.php api/public/.htaccess dist/api/
+          cp -r api/src api/vendor dist/api/lib/
+          printf '%s\n' 'Require all denied' > dist/api/lib/.htaccess
 
       # Everything below needs the repository variable DEPLOY_ENABLED = "true" and these
       # secrets (Settings -> Secrets and variables -> Actions); they are new names, so nothing
@@ -49,6 +63,9 @@ jobs:
       #   MARKFLAT_SFTP_HOST, MARKFLAT_SFTP_USER, MARKFLAT_SFTP_PASS   the laotravez.de login
       #   MARKFLAT_WEBROOT    absolute path of the subdomain's webroot on the server (as
       #                       laotravez's SERVER_DIR, found with a one-off <?php echo __DIR__;)
+      #   MARKFLAT_READ_KEY_SHA256  the API's read key (hash), and
+      #   MARKFLAT_WRITE_KEYS       one "name sha256" line per writer; both made with
+      #     php api/bin/new-key.php <name>    (name "read" for the read key)
       #   MARKFLAT_HTPASSWD   the login line, made with
       #     gh secret set MARKFLAT_HTPASSWD --repo takb/markflat.pwa --body "markflat:$(openssl passwd -apr1)"
       # The paths are secrets, not variables, so they stay masked in this public repo's logs.
@@ -58,13 +75,31 @@ jobs:
         env:
           HTPASSWD: ${{ secrets.MARKFLAT_HTPASSWD }}
           WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
+          READ_KEY: ${{ secrets.MARKFLAT_READ_KEY_SHA256 }}
+          WRITE_KEYS: ${{ secrets.MARKFLAT_WRITE_KEYS }}
         run: |
           [ -n "$HTPASSWD" ] || { echo "::error::secret MARKFLAT_HTPASSWD is not set"; exit 1; }
           [ -n "$WEBROOT" ] || { echo "::error::secret MARKFLAT_WEBROOT is not set"; exit 1; }
           # The songs live in data/ inside the webroot: the host's PHP sees nothing outside its
           # own webroot. data/.htaccess (from public/) denies every request, and so does the
           # rule below in case that file is ever missing.
-          printf '%s\n' "<?php return ['data_dir' => __DIR__.'/data'];" > dist/config.php
+          # The API's keys (hashes only). Without them the API answers every request with 401;
+          # songbook.php (the old API, until the app moves over) keeps its own keys.
+          [ -n "$READ_KEY" ] || echo "::warning::secret MARKFLAT_READ_KEY_SHA256 is not set: the new API lets nobody in"
+          php -r '
+            $writers = [];
+            foreach (preg_split("/\R/", trim((string) getenv("WRITE_KEYS"))) as $line) {
+                if (preg_match("/^\s*([a-z0-9_-]{1,40})\s+([0-9a-fA-F]{64})\s*$/", $line, $m)) {
+                    $writers[$m[1]] = strtolower($m[2]);
+                } elseif (trim($line) !== "") {
+                    fwrite(STDERR, "::error::secret MARKFLAT_WRITE_KEYS: every line must be \"name sha256\"\n");
+                    exit(1);
+                }
+            }
+            $config = ["data_dir" => "@DATA@", "api" => ["read_key" => strtolower(trim((string) getenv("READ_KEY"))), "write_keys" => $writers]];
+            echo "<?php return ", str_replace("\x27@DATA@\x27", "__DIR__.\x27/data\x27", var_export($config, true)), ";\n";
+          ' > dist/config.php
+          php -l dist/config.php > /dev/null
           printf '%s\n' "$HTPASSWD" > dist/.htpasswd
           # Plain http is redirected to https BEFORE any login, so the password never travels
           # unencrypted: the login is only required on https (the proxy header covers a host

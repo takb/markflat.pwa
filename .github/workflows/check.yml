@@ -1,6 +1,6 @@
 name: Check
 
-# Lint, type check, unit tests with coverage, build, browser tests, audit. Runs on pull requests
+# Lint, type check, unit tests with coverage, build, browser tests, audit; the API's own checks. Runs on pull requests
 # and on pushes to other branches; on main, deploy.yml runs it before deploying.
 on:
   push:
@@ -21,7 +21,21 @@ jobs:
           cache: true
           require-lockfile: true
 
-      # The runner has PHP (songbook.php's syntax check and the browser tests' server).
+      # PHP as on the host: songbook.php's syntax check, the browser tests' server, the API.
+      - name: Set up PHP 8.5 and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer
+          coverage: none
+
+      - name: API (backend v2) — install, code style, PHPStan, PHPUnit, audit
+        working-directory: api
+        run: |
+          composer install --no-interaction --no-progress
+          composer check
+          composer audit
+
       - name: Lint
         run: pnpm lint
 
