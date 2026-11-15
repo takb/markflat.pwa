@@ -1,37 +1,131 @@
 @import "tailwindcss";
-@import "tailwindcss-primeui";
-@import "primeicons/primeicons.css";
 
+/* One set of colours for light and dark (D7). The app follows the system unless Settings sets
+   data-theme on <html>. One accent colour; everything else neutral. */
 :root {
+  --bg: #ffffff;
+  --surface: #f4f4f5;
+  --surface-2: #e4e4e7;
+  --border: #d4d4d8;
+  --text: #18181b;
+  --muted: #71717a;
+  --accent: #e91e63;
+  --accent-strong: #c2185b;
+  --accent-text: #ffffff;
+  --accent-soft: #fce4ec;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warn: #d97706;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1c1f;
+    --surface: #27272a;
+    --surface-2: #34343a;
+    --border: #3f3f46;
+    --text: #f4f4f5;
+    --muted: #a1a1aa;
+    --accent: #f06292;
+    --accent-strong: #f48fb1;
+    --accent-text: #1c1c1f;
+    --accent-soft: #4a1d2e;
+    --danger: #f87171;
+    --success: #4ade80;
+    --warn: #fbbf24;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #1c1c1f;
+  --surface: #27272a;
+  --surface-2: #34343a;
+  --border: #3f3f46;
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
+  --accent: #f06292;
+  --accent-strong: #f48fb1;
+  --accent-text: #1c1c1f;
+  --accent-soft: #4a1d2e;
+  --danger: #f87171;
+  --success: #4ade80;
+  --warn: #fbbf24;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--border);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-fg: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
 }
 
-body, #app {
-  width: 100vw;
-  height: 100vh;
+#app {
+  min-height: 100dvh;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 h-9 text-sm font-medium
+      select-none transition-colors disabled:opacity-40 disabled:pointer-events-none
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent;
   }
-  a:hover {
-    color: #747bff;
+  .btn-primary {
+    @apply bg-accent text-accent-fg hover:bg-accent-strong;
   }
-  button {
-    background-color: #f9f9f9;
+  .btn-secondary {
+    @apply bg-surface text-fg hover:bg-surface-2;
+  }
+  .btn-danger {
+    @apply bg-danger text-white hover:opacity-90;
+  }
+  .btn-ghost {
+    @apply text-fg hover:bg-surface;
+  }
+  .btn-icon {
+    @apply px-0 w-9;
+  }
+  .input {
+    @apply h-9 w-full rounded-lg border border-line bg-bg px-3 text-fg placeholder:text-muted
+      focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30;
+  }
+  .menu {
+    @apply z-50 min-w-48 rounded-lg border border-line bg-bg p-1 shadow-lg;
+  }
+  .menu-item {
+    @apply flex items-center gap-2 rounded-md px-2.5 py-2 text-sm outline-none cursor-pointer select-none
+      data-highlighted:bg-surface data-disabled:opacity-40;
   }
 }
 
+/* Chords in the accent colour, semi-bold, so they part from the words at a glance (D7). */
+.mb .mb-chord,
+.mb .mb-chord-inline {
+  color: var(--accent);
+  font-weight: 600;
+}
+.mb .mb-artist {
+  color: var(--muted);
+}

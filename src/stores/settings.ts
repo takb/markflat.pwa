@@ -1,28 +1,68 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, watch, watchEffect } from 'vue'
 import { createApi, type Me } from '@/api/client'
 import { storage } from '@/lib/storage'
 
-// The key (one field: a write key also reads), who it belongs to, and the zoom.
+export type Theme = 'system' | 'light' | 'dark'
+
+export const MIN_ZOOM = 0.6
+export const MAX_ZOOM = 2.5
+export const clampZoom = (z: number) => Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z)) * 100) / 100
+
+// The key (one field: a write key also reads), who it belongs to, and this device's
+// preferences: zoom (the song's font size), colours, the list's order, the chord display.
 export const useSettings = defineStore('settings', () => {
   const key = ref(storage.get('markflat.key') ?? '')
-  const me = ref<Me | null>(null)
-  const zoom = ref(Number(storage.get('markflat.zoom')) || 1)
+  // who the key belongs to, remembered so the app knows offline too
+  const me = ref<Me | null>(readMe())
+  const zoom = ref(clampZoom(Number(storage.get('markflat.zoom')) || 1))
+  const theme = ref<Theme>(pick(storage.get('markflat.theme'), ['system', 'light', 'dark'], 'system'))
+  const sortBy = ref<'title' | 'artist'>(pick(storage.get('markflat.sort'), ['title', 'artist'], 'title'))
+  const unicode = ref(storage.get('markflat.unicode') !== '0')
+  const detailed = ref(storage.get('markflat.detailed') === '1')
   const api = createApi(() => key.value)
 
   watch(zoom, z => storage.set('markflat.zoom', String(z)))
+  watch(sortBy, s => storage.set('markflat.sort', s))
+  watch(unicode, u => storage.set('markflat.unicode', u ? '1' : '0'))
+  watch(detailed, d => storage.set('markflat.detailed', d ? '1' : '0'))
+  watchEffect(() => {
+    storage.set('markflat.theme', theme.value)
+    if (theme.value === 'system') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', theme.value)
+  })
 
   function setKey(value: string) {
     key.value = value.trim()
     storage.set('markflat.key', key.value)
     me.value = null
+    storage.remove('markflat.me')
   }
 
   /** Asks the server whose key it is; throws ApiError (401 for a wrong key, 0 offline). */
   async function checkKey(): Promise<Me> {
-    me.value = await api.me()
-    return me.value
+    const asked = key.value
+    const who = await api.me()
+    if (asked !== key.value) return who // the key changed meanwhile
+    me.value = who
+    storage.set('markflat.me', JSON.stringify(who))
+    return who
   }
 
-  return { key, me, zoom, api, setKey, checkKey }
+  const setZoom = (z: number) => { zoom.value = clampZoom(z) }
+
+  return { key, me, zoom, theme, sortBy, unicode, detailed, api, setKey, checkKey, setZoom }
 })
+
+function readMe(): Me | null {
+  try {
+    const me = JSON.parse(storage.get('markflat.me') ?? 'null') as Me | null
+    return me && typeof me.canWrite === 'boolean' ? me : null
+  } catch {
+    return null
+  }
+}
+
+function pick<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
+  return allowed.includes(value as T) ? (value as T) : fallback
+}

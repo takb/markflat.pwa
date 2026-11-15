@@ -51,9 +51,9 @@ const { offlineReady, needRefresh, updateServiceWorker } = useRegisterSW({
 
 const title = computed(() => {
   if (offlineReady.value)
-    return 'App ready to work offline'
+    return 'markflat now works offline too.'
   if (needRefresh.value)
-    return 'New content available, click on reload button to update.'
+    return 'A new version of markflat is ready.'
   return ''
 })
 
@@ -65,56 +65,13 @@ function close() {
 
 <template>
   <div
-      v-if="offlineReady || needRefresh"
-      class="pwa-toast"
-      aria-labelledby="toast-message"
-      role="alert"
+    v-if="offlineReady || needRefresh"
+    class="pwa-toast fixed left-1/2 top-3 z-[55] flex w-[min(24rem,calc(100vw-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-lg border border-line bg-bg p-3 text-sm shadow-lg"
+    aria-labelledby="toast-message"
+    role="alert"
   >
-    <div class="message">
-      <span id="toast-message">
-        {{ title }}
-      </span>
-    </div>
-    <div class="buttons">
-      <button v-if="needRefresh" type="button" class="reload" @click="updateServiceWorker()">
-        Reload
-      </button>
-      <button type="button" @click="close">
-        Close
-      </button>
-    </div>
+    <span id="toast-message" class="flex-1">{{ title }}</span>
+    <button v-if="needRefresh" type="button" class="btn btn-primary h-8" @click="updateServiceWorker()">Reload</button>
+    <button type="button" class="btn btn-secondary h-8" @click="close">Close</button>
   </div>
 </template>
-
-<style scoped>
-.pwa-toast {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  margin: 16px;
-  padding: 12px;
-  border: 1px solid #8885;
-  border-radius: 4px;
-  z-index: 1;
-  text-align: left;
-  box-shadow: 3px 4px 5px 0 #8885;
-  display: grid;
-  background-color: white;
-}
-.pwa-toast .message {
-  margin-bottom: 8px;
-}
-.pwa-toast .buttons {
-  display: flex;
-}
-.pwa-toast button {
-  border: 1px solid #8885;
-  outline: none;
-  margin-right: 5px;
-  border-radius: 2px;
-  padding: 3px 10px;
-}
-.pwa-toast button.reload {
-  display: block;
-}
-</style>

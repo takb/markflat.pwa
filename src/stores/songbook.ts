@@ -166,6 +166,24 @@ export const useSongbook = defineStore('songbook', () => {
     conflicts.value = conflicts.value.filter(x => x.slug !== slug)
   }
 
+  /**
+   * Makes an old version current on the server (D6), also for a deleted song. This device's
+   * copy is replaced by it; a stale copy gets the server's version and an error instead.
+   */
+  async function restore(slug: string, id: string): Promise<void> {
+    const etag = songs.value[slug]?.etag ?? null
+    try {
+      accept(await useSettings().api.restore(slug, id, etag))
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 412) {
+        const theirs = await serverVersion(slug)
+        if (theirs) accept(theirs)
+        throw new ApiError(412, 'conflict', 'The song changed on the server in the meantime: its new version is shown, try again.')
+      }
+      throw e
+    }
+  }
+
   async function serverVersion(slug: string): Promise<ServerSong | null> {
     try {
       return await useSettings().api.song(slug)
@@ -175,7 +193,7 @@ export const useSongbook = defineStore('songbook', () => {
     }
   }
 
-  return { songs, conflicts, list, pending, changed, create, setContent, reset, sync, save, uploadPending, remove, resolve }
+  return { songs, conflicts, list, pending, changed, create, setContent, reset, sync, save, uploadPending, remove, resolve, restore }
 })
 
 /** The songbook from localStorage; the old app's format is taken over once. */

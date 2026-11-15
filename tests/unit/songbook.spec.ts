@@ -128,6 +128,27 @@ describe('songbook store', () => {
     expect(localStorage.getItem('apiKeyRead')).toBeNull()
   })
 
+  it('restores an old version, also of a deleted song (D6)', async () => {
+    const songbook = await fresh()
+    api.revisions.set('yesterday', [['r1', '# Yesterday - The Beatles\n1. old']])
+    await songbook.restore('yesterday', 'r1')
+    expect(api.songs.get('yesterday')).toBe('# Yesterday - The Beatles\n1. old')
+    expect(songbook.songs.yesterday.content).toBe('# Yesterday - The Beatles\n1. old')
+    expect(songbook.changed('yesterday')).toBe(false)
+
+    api.revisions.set('gone', [['r2', '# Gone - Someone']])
+    await songbook.restore('gone', 'r2')
+    expect(songbook.songs.gone.content).toBe('# Gone - Someone')
+  })
+
+  it('a restore over a newer server version shows that version instead', async () => {
+    const songbook = await fresh()
+    api.revisions.set('yesterday', [['r1', 'old']])
+    api.songs.set('yesterday', 'newer elsewhere')
+    await expect(songbook.restore('yesterday', 'r1')).rejects.toMatchObject({ status: 412 })
+    expect(songbook.songs.yesterday.content).toBe('newer elsewhere')
+  })
+
   it('keeps everything local without a key', async () => {
     const songbook = await fresh()
     useSettings().setKey('')

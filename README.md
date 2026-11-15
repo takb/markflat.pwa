@@ -6,21 +6,29 @@ The app runs in the browser, can be installed, and keeps working offline. A smal
 the server holds the shared songbook.
 
 It is a personal tool, made in 2025 to play from on a phone or tablet: open a song, enlarge it
-with a swipe, transpose it to your key.
+with two fingers, transpose it to your key.
 
 ## Features
 
-- **Songbook list**: sortable by title or artist, with a search across titles, artists and lyrics.
-- **Song view**: chords sit above the syllable they belong to. From the floating menu you can
-  transpose up or down by semitones, switch between ♯/♭ symbols and `#`/`b`, show detailed chord
-  names, and zoom (0.5×–2×). On a touch screen, swipe right to zoom in, swipe left to zoom out,
-  and long-press to go back to the list.
-- **Editor** (switch on "Edit mode" in the list menu): a plain-text pane with a live preview.
-  The panes sit side by side on wide screens and in two tabs on narrow ones (≤ 1200 px).
-  Ctrl/Cmd+S saves.
+- **Songbook list**: one row per song, sorted by title (or by artist, from the menu), with a
+  search across titles, artists and lyrics that ignores case and accents (`cafe` finds *Café*).
+  A dot marks songs changed on this device and not uploaded yet.
+- **Song view**: chords sit above the syllable they belong to. A toolbar at the bottom (it hides
+  while you scroll down) transposes by semitones and shows by how much, sets the font size, and
+  holds ♯/♭ symbols, detailed chord names and the song's history. On a touch screen, pinch to
+  change the font size (the song is laid out again, not magnified) and swipe sideways to
+  transpose. Back (the button, the browser's, or the phone's back gesture) returns to the list.
+- **Editor** (✎ in the song's toolbar, + in the list, for write keys): CodeMirror with markflat
+  highlighting (a brace that is no chord looks different, so typos stand out), undo, search,
+  and a live preview, side by side on wide screens and in two tabs on narrow ones. Ctrl/Cmd+S
+  saves; a changed title renames the song.
+- **History**: every save keeps the previous version on the server (the last 20 per song); a
+  writer can restore one, and bring back deleted songs.
 - **Offline first**: the songbook lives in the browser's `localStorage`. "Download songbook"
-  replaces it with the server's copy, and saving or deleting a song also sends the change to the
-  server.
+  merges the server's copy in without losing changes made here; changes made offline are
+  uploaded later. A song changed on both sides asks which version stays.
+- **Keys**: one read key, a write key per person; the admin makes and revokes them in the app.
+- **Light and dark**: follows the system, or set in Settings.
 - **Installable PWA** (service worker via Workbox). When a new version is deployed, the app
   offers a reload.
 
@@ -48,8 +56,10 @@ package of its own. Raw HTML in a song is shown as text, not run.
 ## Stack
 
 - Vue 3 (`<script setup>`, TypeScript 5.9), Vite 8
-- PrimeVue 4.5 (Aura theme, pinned: from v5 its licence requires a key) and Tailwind CSS 4 (`tailwindcss-primeui`), PrimeIcons
-- markdown-it with the markflat plugin, `vue3-touch-events` for gestures
+- [Reka UI](https://reka-ui.com) (unstyled, accessible components: menus, dialogs, tabs,
+  splitter, toasts, toolbar), Tailwind CSS 4, [Lucide](https://lucide.dev) icons
+- CodeMirror 6 for the editor (loaded only when a song is edited)
+- markdown-it with the markflat plugin; `@vueuse/core`
 - `vite-plugin-pwa` / Workbox for the service worker, manifest and icons (generated from
   `public/favicon.svg`)
 - Pinia for the app's state
@@ -61,17 +71,21 @@ package of its own. Raw HTML in a song is shown as text, not run.
 
 | Path | What |
 |---|---|
-| `src/App.vue` | switches between list, song, editor and key views; the conflict dialog |
+| `src/App.vue` | switches between the views; the conflict dialog, toasts |
 | `src/stores/songbook.ts` | the songbook (Pinia): songs by name, kept in `localStorage`; download merges, save/delete/rename on the server, conflicts |
-| `src/stores/settings.ts`, `ui.ts` | the key and who it belongs to, zoom; the current view and song |
+| `src/stores/settings.ts` | the key and who it belongs to; this device's zoom, colours, order, chord display |
+| `src/stores/ui.ts` | the current view and song, tied to the browser history (`#/song/<name>`, …) |
+| `src/stores/toast.ts` | short messages |
 | `src/api/client.ts` | the API client (`X-Api-Key`, ETags, errors) |
-| `src/lib/` | the merge rules, the heading parser and file names, safe `localStorage` |
+| `src/lib/` | the merge rules, the heading parser and file names, search, gesture rules, the editor's markflat highlighting, safe `localStorage` |
+| `src/composables/gestures.ts` | pinch, swipe and tap on a song; the toolbar that hides while scrolling |
 | `src/composables/markdown.ts` | the markdown-it instance with the markflat plugin |
 | `packages/markdown-it-markflat/` | the plugin: the markflat syntax, chords, transposition, stylesheet, its tests |
-| `src/composables/sizes.ts` | the narrow/wide breakpoint |
-| `src/components/List.vue` | songbook table, search, menu (edit mode, settings for the key, download, upload, keys) |
-| `src/components/Show.vue` | song view: transpose, chord display options, zoom, gestures |
-| `src/components/Editor.vue`, `Code.vue` | editor layout, text pane with save/undo/delete |
+| `src/components/List.vue`, `SettingsDialog.vue` | the song list, search, menu; settings (key, colours) |
+| `src/components/SongPage.vue`, `SongSheet.vue` | the song page with its toolbar; a rendered song |
+| `src/components/Editor.vue`, `CodeEditor.vue` | the editor page (save, undo all, delete, history); CodeMirror |
+| `src/components/HistoryPage.vue`, `DeletedPage.vue` | a song's older versions; deleted songs |
+| `src/components/ui/` | dialog, menu and toasts on Reka UI |
 | `src/components/Keys.vue`, `ConflictDialog.vue` | key management (admin only); both versions of a song changed on both sides |
 | `src/components/PWABadge.vue` | "ready offline" and "update available" prompt |
 | `api/` | the server API (backend v2): front controller in `public/`, code in `src/`, tests in `tests/` |
@@ -172,11 +186,9 @@ The workflow lists the repository variable and secrets it needs.
 ## Status
 
 The app works. A modernisation is under way: the tooling and dependencies are up to date and the
-tests and CI are in place, the renderer is a markdown-it plugin and the new backend is written
-(November 2026). Still to come:
+tests and CI are in place, the renderer is a markdown-it plugin, the app runs on the new backend
+with per-person keys, and the interface is rebuilt on Reka UI (November 2026). Still to come:
 
-- move the app onto the new backend (`api/`)
-- replace PrimeVue (from v5 its licence requires a key)
 - open markflat.laotravez.de to the public (it is password-protected until then)
 
 ## Licence

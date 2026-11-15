@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
-import Button from 'primevue/button'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
+import { ArrowLeft, Copy, Plus } from '@lucide/vue'
 import { ApiError, type KeyList, type Writer } from '@/api/client'
 import { useSettings } from '@/stores/settings'
+import { useToast } from '@/stores/toast'
 import { useUi } from '@/stores/ui'
+import AppDialog from './ui/AppDialog.vue'
 
 // Key management (D14), for the admin only: the server refuses everyone else anyway.
 const toast = useToast()
@@ -21,7 +18,7 @@ const revoking = ref<Writer | null>(null)
 const replacingRead = ref(false)
 const shown = ref<{ title: string, key: string, note: string } | null>(null)
 
-const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '–')
+const date = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '–')
 const fail = (summary: string, e: unknown) =>
   toast.add({ severity: 'error', summary, detail: e instanceof ApiError ? e.message : String(e), life: 5000 })
 
@@ -83,78 +80,71 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="keys p-4 max-w-4xl mx-auto">
-    <div class="flex items-center gap-2 mb-4">
-      <Button icon="pi pi-home" aria-label="Back to the list" @click="ui.home()" />
-      <h1 class="text-xl font-bold flex-grow">Keys</h1>
-      <Button label="New write key" icon="pi pi-plus" @click="creating = true" />
-    </div>
+  <div class="mx-auto min-h-dvh max-w-3xl">
+    <header class="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-bg/95 px-2 py-2 backdrop-blur">
+      <button type="button" class="btn btn-ghost btn-icon" aria-label="Back" @click="ui.back()"><ArrowLeft :size="20" /></button>
+      <h1 class="flex-1 font-semibold">Keys</h1>
+      <button type="button" class="btn btn-primary" @click="creating = true"><Plus :size="16" />New write key</button>
+    </header>
 
-    <DataTable :value="keys?.writers ?? []" data-key="name" striped-rows>
-      <Column field="name" header="Writer">
-        <template #body="{ data }">
-          {{ data.name }}
-          <span v-if="data.bootstrap" class="text-sm opacity-70"> (server configuration)</span>
-        </template>
-      </Column>
-      <Column header="Created">
-        <template #body="{ data }">{{ data.bootstrap ? '–' : date(data.created) + ' by ' + data.by }}</template>
-      </Column>
-      <Column header="Last used">
-        <template #body="{ data }">{{ date(data.lastUsed) }}</template>
-      </Column>
-      <Column>
-        <template #body="{ data }">
-          <Button v-if="!data.bootstrap" label="Revoke" severity="danger" text @click="revoking = data" />
-        </template>
-      </Column>
-    </DataTable>
-
-    <div class="mt-8 flex items-center gap-4">
-      <div class="flex-grow">
-        <div class="font-semibold">Read key</div>
-        <div class="text-sm opacity-80">
-          {{ keys?.readKey.fromSecret ? 'From the server configuration' : 'Made ' + date(keys?.readKey.created ?? null) + ' by ' + keys?.readKey.by }}
+    <h2 class="px-4 pt-4 pb-1 text-sm font-semibold text-muted">Write keys</h2>
+    <ul class="divide-y divide-line">
+      <li v-for="w in keys?.writers ?? []" :key="w.name" class="flex items-center gap-3 px-4 py-2.5" :data-writer="w.name">
+        <div class="min-w-0 flex-1">
+          <div class="font-medium">
+            {{ w.name }}<span v-if="w.bootstrap" class="text-sm font-normal text-muted"> · server configuration</span>
+          </div>
+          <div class="text-sm text-muted">
+            <template v-if="!w.bootstrap">Made {{ date(w.created) }} by {{ w.by }} · </template>last used {{ date(w.lastUsed) }}
+          </div>
         </div>
+        <button v-if="!w.bootstrap" type="button" class="btn btn-ghost text-danger" @click="revoking = w">Revoke</button>
+      </li>
+    </ul>
+
+    <h2 class="px-4 pt-6 pb-1 text-sm font-semibold text-muted">Read key</h2>
+    <div class="flex items-center gap-3 px-4 py-2.5">
+      <div class="flex-1 text-sm">
+        {{ keys?.readKey.fromSecret ? 'From the server configuration' : 'Made ' + date(keys?.readKey.created ?? null) + ' by ' + keys?.readKey.by }}
       </div>
-      <Button label="New read key" severity="secondary" @click="replacingRead = true" />
+      <button type="button" class="btn btn-secondary" @click="replacingRead = true">New read key</button>
     </div>
 
-    <Dialog v-model:visible="creating" modal header="New write key" :style="{ width: '24rem' }">
-      <label for="writerName" class="font-semibold block mb-2">Name</label>
-      <InputText id="writerName" v-model="newName" class="w-full" autocomplete="off" placeholder="e.g. kim" @keydown.enter="create" />
-      <p class="text-sm mt-2 mb-4">Lowercase letters, digits, _ and -. Each change this key makes is recorded under this name.</p>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancel" severity="secondary" @click="creating = false" />
-        <Button label="Create" :disabled="!newName.trim()" @click="create" />
-      </div>
-    </Dialog>
+    <AppDialog v-model:open="creating" title="New write key">
+      <label for="writerName" class="mb-1 block text-sm font-semibold">Name</label>
+      <input id="writerName" v-model="newName" class="input" autocomplete="off" placeholder="e.g. kim" @keydown.enter="create">
+      <p class="mt-2 text-sm text-muted">Lowercase letters, digits, _ and -. Each change this key makes is recorded under this name.</p>
+      <template #actions>
+        <button type="button" class="btn btn-secondary" @click="creating = false">Cancel</button>
+        <button type="button" class="btn btn-primary" :disabled="!newName.trim()" @click="create">Create</button>
+      </template>
+    </AppDialog>
 
-    <Dialog :visible="revoking !== null" modal header="Revoke this key?" :style="{ width: '24rem' }" @update:visible="v => { if (!v) revoking = null }">
-      <p class="mb-4">{{ revoking?.name }}'s key will stop working at once. Their past changes stay recorded.</p>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancel" severity="secondary" @click="revoking = null" />
-        <Button label="Revoke" severity="danger" @click="revoke" />
-      </div>
-    </Dialog>
+    <AppDialog :open="revoking !== null" title="Revoke this key?" @update:open="v => { if (!v) revoking = null }">
+      <p>{{ revoking?.name }}'s key will stop working at once. Their past changes stay recorded.</p>
+      <template #actions>
+        <button type="button" class="btn btn-secondary" @click="revoking = null">Cancel</button>
+        <button type="button" class="btn btn-danger" @click="revoke">Revoke</button>
+      </template>
+    </AppDialog>
 
-    <Dialog v-model:visible="replacingRead" modal header="Replace the read key?" :style="{ width: '26rem' }">
-      <p class="mb-4">The current read key stops working at once: everyone who only reads needs the new one. Write keys are not affected.</p>
-      <div class="flex justify-end gap-2">
-        <Button label="Cancel" severity="secondary" @click="replacingRead = false" />
-        <Button label="Replace" severity="danger" @click="replaceRead" />
-      </div>
-    </Dialog>
+    <AppDialog v-model:open="replacingRead" title="Replace the read key?">
+      <p>The current read key stops working at once: everyone who only reads needs the new one. Write keys are not affected.</p>
+      <template #actions>
+        <button type="button" class="btn btn-secondary" @click="replacingRead = false">Cancel</button>
+        <button type="button" class="btn btn-danger" @click="replaceRead">Replace</button>
+      </template>
+    </AppDialog>
 
-    <Dialog :visible="shown !== null" modal :closable="false" :header="shown?.title" :style="{ width: '28rem' }">
+    <AppDialog :open="shown !== null" :title="shown?.title ?? ''" :closable="false">
       <p class="mb-3">{{ shown?.note }}</p>
-      <div class="flex gap-2 mb-4">
-        <InputText :model-value="shown?.key" readonly class="flex-auto font-mono" data-testid="new-key" @focus="($event.target as HTMLInputElement).select()" />
-        <Button icon="pi pi-copy" aria-label="Copy" @click="copy" />
+      <div class="flex gap-2">
+        <input :value="shown?.key" readonly class="input font-mono" data-testid="new-key" @focus="($event.target as HTMLInputElement).select()">
+        <button type="button" class="btn btn-secondary btn-icon shrink-0" aria-label="Copy" @click="copy"><Copy :size="16" /></button>
       </div>
-      <div class="flex justify-end">
-        <Button label="Done" @click="shown = null" />
-      </div>
-    </Dialog>
+      <template #actions>
+        <button type="button" class="btn btn-primary" @click="shown = null">Done</button>
+      </template>
+    </AppDialog>
   </div>
 </template>

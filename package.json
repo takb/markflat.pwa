@@ -18,15 +18,19 @@
     "dev:api": "MARKFLAT_CONFIG=api/dev/config.php php -S 127.0.0.1:8090 api/public/index.php"
   },
   "dependencies": {
-    "@primeuix/themes": "^2.0.3",
-    "@primevue/core": "4.5.5",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@lezer/highlight": "^1.2.5",
+    "@lucide/vue": "^1.73.0",
+    "@vueuse/core": "^15.0.0",
     "markdown-it": "^15.0.3",
     "markdown-it-markflat": "workspace:*",
     "pinia": "^4.1.0",
-    "primeicons": "^7.0.0",
-    "primevue": "4.5.5",
-    "vue": "^3.5.45",
-    "vue3-touch-events": "^5.0.15"
+    "reka-ui": "^2.11.0",
+    "vue": "^3.5.45"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -44,7 +48,6 @@
     "globals": "^17.14.0",
     "jsdom": "^31.0.1",
     "tailwindcss": "^4.3.5",
-    "tailwindcss-primeui": "^0.6.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",

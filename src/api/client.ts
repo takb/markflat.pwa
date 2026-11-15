@@ -25,6 +25,21 @@ export interface Writer {
   bootstrap: boolean
 }
 
+export interface RevisionInfo {
+  id: string
+  time: string
+  action: 'save' | 'delete' | 'rename' | 'restore'
+  writer: string
+}
+
+export interface DeletedSong {
+  slug: string
+  title: string
+  artist: string
+  deletedAt: string
+  deletedBy: string
+}
+
 export interface KeyList {
   writers: Writer[]
   readKey: { fromSecret: boolean, created: string | null, by: string | null }
@@ -80,6 +95,12 @@ export function createApi(getKey: () => string, base: string = API_URL) {
     save: (slug: string, content: string, etag: string | null) => call<ServerSong>('PUT', song(slug), { content }, etag),
     remove: (slug: string, etag: string) => call<void>('DELETE', song(slug), undefined, etag),
     rename: (slug: string, to: string, etag: string) => call<ServerSong>('POST', song(slug) + '/rename', { to }, etag),
+    revisions: async (slug: string) => (await call<{ revisions: RevisionInfo[] }>('GET', song(slug) + '/revisions')).revisions,
+    revision: (slug: string, id: string) =>
+      call<RevisionInfo & { content: string }>('GET', song(slug) + '/revisions/' + encodeURIComponent(id)),
+    restore: (slug: string, id: string, etag: string | null) =>
+      call<ServerSong>('POST', song(slug) + '/revisions/' + encodeURIComponent(id) + '/restore', undefined, etag),
+    deleted: async () => (await call<{ songs: DeletedSong[] }>('GET', '/deleted')).songs,
     keys: () => call<KeyList>('GET', '/keys'),
     createKey: (name: string) => call<{ name: string, key: string }>('POST', '/keys', { name }),
     revokeKey: (name: string) => call<void>('DELETE', '/keys/' + encodeURIComponent(name)),

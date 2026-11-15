@@ -1,168 +1,109 @@
 <script setup lang="ts">
-    import { ref, computed } from 'vue'
-    import { FilterMatchMode } from '@primevue/core/api'
-    import { useToast } from 'primevue/usetoast'
-    import DataTable, { type DataTableRowClickEvent } from 'primevue/datatable'
-    import Column from 'primevue/column'
-    import Button from 'primevue/button'
-    import Dialog from 'primevue/dialog'
-    import InputText from 'primevue/inputtext'
-    import IconField from 'primevue/iconfield'
-    import InputIcon from 'primevue/inputicon'
-    import Menu from 'primevue/menu'
-    import type { MenuItem } from 'primevue/menuitem'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ArchiveRestore, ArrowDownAZ, Download, EllipsisVertical, KeyRound, Plus, Search, Settings, Upload, X } from '@lucide/vue'
+import { ApiError } from '@/api/client'
+import { compareBy, matches } from '@/lib/search'
+import { useSettings } from '@/stores/settings'
+import { useSongbook } from '@/stores/songbook'
+import { useToast } from '@/stores/toast'
+import { useUi } from '@/stores/ui'
+import AppMenu, { type MenuEntry } from './ui/AppMenu.vue'
+import SettingsDialog from './SettingsDialog.vue'
 
-    import { ApiError } from '@/api/client'
-    import { useSettings } from '@/stores/settings'
-    import { useSongbook } from '@/stores/songbook'
-    import { useUi } from '@/stores/ui'
-    import useSizes from '../composables/sizes.ts'
+// The song list (D7): one row per song, a search that stays at the top, + for writers.
+const settings = useSettings()
+const songbook = useSongbook()
+const toast = useToast()
+const ui = useUi()
+const query = computed({ get: () => ui.query, set: (q: string) => { ui.query = q } })
+const settingsOpen = ref(false)
+const canWrite = computed(() => settings.me?.canWrite === true)
 
-    const toast = useToast()
-    const settings = useSettings()
-    const songbook = useSongbook()
-    const ui = useUi()
-    const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
-    const menu = ref()
-    const settingsOpen = ref(false)
-    const keyInput = ref('')
-    const keyStatus = ref('')
-    const sizes = useSizes()
-    const panelCss = computed(() => {
-      return sizes.isMobile.value ? 'h-full w-full' : 'h-full w-8/12 ml-auto mr-auto'
+const songs = computed(() => songbook.list.filter(s => matches(s, query.value)).sort(compareBy(settings.sortBy)))
+
+// Back from a song: where the list was.
+onMounted(() => nextTick(() => window.scrollTo(0, ui.listScroll)))
+onBeforeUnmount(() => { ui.listScroll = window.scrollY })
+
+const fail = (summary: string, e: unknown) => {
+  const detail = e instanceof ApiError
+    ? (e.status === 401 ? 'The key was not accepted. Check it in the settings.' : e.message)
+    : String(e)
+  toast.add({ severity: 'error', summary, detail, life: 5000 })
+}
+
+async function download() {
+  try {
+    const r = await songbook.sync()
+    const parts = [r.added && r.added + ' new', r.updated && r.updated + ' updated', r.removed && r.removed + ' removed'].filter(Boolean)
+    toast.add({
+      severity: 'success',
+      summary: 'Songbook downloaded',
+      detail: (parts.length ? parts.join(', ') : 'Everything was up to date') + '.'
+        + (r.pending ? ' ' + r.pending + ' song(s) changed here are not uploaded yet.' : '')
+        + (r.conflicts.length ? ' ' + r.conflicts.length + ' changed on both sides.' : ''),
+      life: 5000,
     })
-    const toggle = (event: Event) => {
-      menu.value.toggle(event)
-    }
-    const viewSong = (event: DataTableRowClickEvent) => {
-      ui.show(event.data.slug)
-    }
-    const fail = (summary: string, e: unknown) => {
-      const detail = e instanceof ApiError
-        ? (e.status === 401 ? 'The key was not accepted. Check it in the settings.' : e.message)
-        : String(e)
-      toast.add({ severity: 'error', summary, detail, life: 5000 })
-    }
+  } catch (e) {
+    fail('Download failed', e)
+  }
+}
 
-    async function download() {
-      try {
-        const r = await songbook.sync()
-        const parts = [r.added && r.added + ' new', r.updated && r.updated + ' updated', r.removed && r.removed + ' removed'].filter(Boolean)
-        toast.add({
-          severity: 'success',
-          summary: 'Songbook downloaded',
-          detail: (parts.length ? parts.join(', ') : 'Everything was up to date') + '.'
-            + (r.pending ? ' ' + r.pending + ' song(s) changed here are not uploaded yet.' : '')
-            + (r.conflicts.length ? ' ' + r.conflicts.length + ' changed on both sides.' : ''),
-          life: 5000,
-        })
-      } catch (e) {
-        fail('Download failed', e)
-      }
-    }
+async function upload() {
+  try {
+    const r = await songbook.uploadPending()
+    const left = songbook.pending.length
+    toast.add({
+      severity: left ? 'warn' : 'success',
+      summary: 'Upload',
+      detail: r.saved + ' uploaded.' + (left ? ' ' + left + ' still waiting (offline, or changed on both sides).' : ''),
+      life: 5000,
+    })
+  } catch (e) {
+    fail('Upload failed', e)
+  }
+}
 
-    async function upload() {
-      try {
-        const r = await songbook.uploadPending()
-        const left = songbook.pending.length
-        toast.add({
-          severity: left ? 'warn' : 'success',
-          summary: 'Upload',
-          detail: r.saved + ' uploaded.' + (left ? ' ' + left + ' still waiting (offline, or changed on both sides).' : ''),
-          life: 5000,
-        })
-      } catch (e) {
-        fail('Upload failed', e)
-      }
-    }
-
-    function openSettings() {
-      keyInput.value = settings.key
-      keyStatus.value = describe()
-      settingsOpen.value = true
-    }
-
-    function describe(): string {
-      const me = settings.me
-      if (!me) return ''
-      return me.isAdmin ? 'Writes as ' + me.writer + ' (admin)' : me.writer ? 'Writes as ' + me.writer : 'Reads only'
-    }
-
-    async function saveKey() {
-      settings.setKey(keyInput.value)
-      try {
-        await settings.checkKey()
-        keyStatus.value = describe()
-        toast.add({ severity: 'success', summary: 'Key saved', detail: keyStatus.value + '.', life: 3000 })
-        settingsOpen.value = false
-      } catch (e) {
-        keyStatus.value = e instanceof ApiError && e.status === 401 ? 'This key is not valid.' : 'Could not check the key (offline?). It is saved.'
-      }
-    }
-
-    const items = computed<MenuItem[]>(() => [
-      { label: ui.editMode ? 'Leave edit mode' : 'Edit mode', icon: 'pi pi-pencil', command: () => { ui.editMode = !ui.editMode } },
-      { label: 'Settings', icon: 'pi pi-cog', command: openSettings },
-      { label: 'Download songbook', icon: 'pi pi-download', command: download },
-      { label: 'Upload changes (' + songbook.pending.length + ')', icon: 'pi pi-upload', visible: songbook.pending.length > 0 && settings.me?.canWrite !== false, command: upload },
-      { label: 'Keys', icon: 'pi pi-key', visible: settings.me?.isAdmin === true, command: () => ui.keys() },
-    ])
-
-    // Who the key belongs to (for the menu); quietly, the app works offline too.
-    if (settings.key && !settings.me) settings.checkKey().catch(() => {})
+const items = computed<MenuEntry[]>(() => [
+  { label: 'Settings', icon: Settings, action: () => { settingsOpen.value = true } },
+  { label: 'Download songbook', icon: Download, action: download },
+  { label: 'Upload changes (' + songbook.pending.length + ')', icon: Upload, hidden: !songbook.pending.length || settings.me?.canWrite === false, action: upload },
+  { label: 'Sort by artist', icon: ArrowDownAZ, checked: settings.sortBy === 'artist', separatorBefore: true, action: () => { settings.sortBy = settings.sortBy === 'artist' ? 'title' : 'artist' } },
+  { label: 'Deleted songs', icon: ArchiveRestore, hidden: !canWrite.value, separatorBefore: true, action: () => ui.deleted() },
+  { label: 'Keys', icon: KeyRound, hidden: settings.me?.isAdmin !== true, action: () => ui.keys() },
+])
 </script>
 
 <template>
-  <div>
-    <DataTable v-model:filters="filters" :value="songbook.list" :global-filter-fields="['title', 'artist', 'content']" sort-field="title" :sort-order="1" :class="panelCss" scrollable scroll-height="flex" striped-rows removable-sort data-key="slug" @row-click="viewSong">
-        <template #header>
-            <div class="flex justify-between">
-              <Button type="button" icon="pi pi-ellipsis-v" aria-label="Menu" aria-haspopup="true" aria-controls="overlay_menu" @click="toggle" />
-              <Menu id="overlay_menu" ref="menu" :model="items" :popup="true" />
-              <IconField>
-                  <InputIcon>
-                      <i class="pi pi-search" />
-                  </InputIcon>
-                  <InputText v-model="filters['global'].value" placeholder="Keyword Search" />
-              </IconField>
-            </div>
-        </template>
-        <template #empty> No songs yet: enter your key in the settings, then download the songbook. </template>
-        <Column field="title" header="Title" class="p-2 flex-grow" sortable>
-            <template #body="{ data }">
-              {{ data.title || data.slug }}
-              <span v-if="songbook.changed(data.slug)" class="pending" title="Changed here, not uploaded yet">●</span>
-            </template>
-        </Column>
-        <Column field="artist" header="Composer/Interpret" sortable />
-        <Column v-if="ui.editMode">
-            <template #header>
-              <Button icon="pi pi-plus" rounded raised class="mr-2" aria-label="New song" @click="() => ui.edit(songbook.create())" />
-            </template>
-            <template #body="slotProps">
-              <Button icon="pi pi-pencil" rounded raised class="mr-2" aria-label="Edit" @click.stop="() => ui.edit(slotProps.data.slug)" />
-            </template>
-        </Column>
-    </DataTable>
-    <Dialog v-model:visible="settingsOpen" modal header="Settings" :style="{ width: '25rem' }">
-      <div class="flex items-center gap-4 mb-2">
-        <label for="apiKey" class="font-semibold w-16">Key</label>
-        <InputText id="apiKey" v-model="keyInput" type="password" class="flex-auto" autocomplete="off" @keydown.enter="saveKey" />
+  <div class="mx-auto flex min-h-dvh max-w-2xl flex-col">
+    <header class="sticky top-0 z-20 flex items-center gap-1 border-b border-line bg-bg/95 px-2 py-2 backdrop-blur">
+      <AppMenu :items="items" label="Menu"><EllipsisVertical :size="20" /></AppMenu>
+      <div class="relative flex-1">
+        <Search :size="16" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+        <input v-model="query" type="search" class="input pl-9 pr-8" placeholder="Search title, artist, text" aria-label="Search">
+        <button v-if="query" type="button" class="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 text-muted hover:text-fg" aria-label="Clear the search" @click="query = ''">
+          <X :size="16" />
+        </button>
       </div>
-      <p class="text-sm mb-6 min-h-5">{{ keyStatus || 'Your read or write key, from the songbook\'s admin.' }}</p>
-      <div class="flex justify-end gap-2">
-        <Button type="button" label="Cancel" severity="secondary" @click="settingsOpen = false"></Button>
-        <Button type="button" label="Save" @click="saveKey"></Button>
-      </div>
-    </Dialog>
+      <button v-if="canWrite" type="button" class="btn btn-primary btn-icon" aria-label="New song" @click="ui.edit(songbook.create())">
+        <Plus :size="20" />
+      </button>
+    </header>
+
+    <ul v-if="songs.length" class="divide-y divide-line">
+      <li v-for="s in songs" :key="s.slug">
+        <button type="button" class="song-row flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface focus-visible:bg-surface focus-visible:outline-none" :data-song="s.slug" @click="ui.show(s.slug)">
+          <span class="min-w-0 flex-1">
+            <span class="block truncate font-medium">{{ s.title || s.slug }}</span>
+            <span v-if="s.artist" class="block truncate text-sm text-muted">{{ s.artist }}</span>
+          </span>
+          <span v-if="songbook.changed(s.slug)" class="text-xs text-accent" title="Changed here, not uploaded yet" aria-label="changed here">●</span>
+        </button>
+      </li>
+    </ul>
+    <p v-else-if="songbook.list.length" class="p-6 text-center text-muted">No song matches “{{ query }}”.</p>
+    <p v-else class="p-6 text-center text-muted">No songs yet: enter your key in the settings, then download the songbook.</p>
+
+    <SettingsDialog v-model:open="settingsOpen" />
   </div>
 </template>
-
-<style scoped>
-.pending {
-  color: var(--p-primary-color);
-  font-size: 0.7em;
-  margin-left: 0.3em;
-  vertical-align: middle;
-}
-</style>
