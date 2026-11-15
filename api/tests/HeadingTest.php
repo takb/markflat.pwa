@@ -21,6 +21,9 @@ final class HeadingTest extends TestCase
         yield ["\n\n# Only a title", 'Only a title', ''];
         yield ['1. no heading', '', ''];
         yield ['# Kimi o nosete (君をのせて) - Azumi Inoue', 'Kimi o nosete (君をのせて)', 'Azumi Inoue'];
+        // UTF-8 bytes such as 0x85 (in х, ら …) are not line breaks
+        yield ["# Gluchari (Глухари) - Александр Розенбаум\r\n1. Глуха{e}ри", 'Gluchari (Глухари)', 'Александр Розенбаум'];
+        yield ["# Hotaru no hikari (蛍の光) - Chikai Inagaki \r\n~Chords", 'Hotaru no hikari (蛍の光)', 'Chikai Inagaki'];
     }
 
     #[DataProvider('headings')]

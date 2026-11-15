@@ -10,7 +10,7 @@ final class Heading
     /** @return array{title: string, artist: string} */
     public static function parse(string $content): array
     {
-        foreach (preg_split('/\R/', $content) ?: [] as $line) {
+        foreach (preg_split('/\R/u', $content) ?: [] as $line) {
             if (trim($line) === '') {
                 continue;
             }

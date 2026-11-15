@@ -66,6 +66,8 @@ jobs:
       #   MARKFLAT_READ_KEY_SHA256  the API's read key (hash), and
       #   MARKFLAT_WRITE_KEYS       one "name sha256" line per writer; both made with
       #     php api/bin/new-key.php <name>    (name "read" for the read key)
+      # and the repository VARIABLE MARKFLAT_ADMIN: the writer who manages keys in the app (D14),
+      # one of the names in MARKFLAT_WRITE_KEYS. Keys made in the app live in data/.keys.json.
       #   MARKFLAT_HTPASSWD   the login line, made with
       #     gh secret set MARKFLAT_HTPASSWD --repo takb/markflat.pwa --body "markflat:$(openssl passwd -apr1)"
       # The paths are secrets, not variables, so they stay masked in this public repo's logs.
@@ -77,6 +79,7 @@ jobs:
           WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
           READ_KEY: ${{ secrets.MARKFLAT_READ_KEY_SHA256 }}
           WRITE_KEYS: ${{ secrets.MARKFLAT_WRITE_KEYS }}
+          ADMIN: ${{ vars.MARKFLAT_ADMIN }}
         run: |
           [ -n "$HTPASSWD" ] || { echo "::error::secret MARKFLAT_HTPASSWD is not set"; exit 1; }
           [ -n "$WEBROOT" ] || { echo "::error::secret MARKFLAT_WEBROOT is not set"; exit 1; }
@@ -99,7 +102,12 @@ jobs:
                     exit(1);
                 }
             }
-            $config = ["data_dir" => "@DATA@", "api" => ["read_key" => strtolower(trim((string) getenv("READ_KEY"))), "write_keys" => $writers]];
+            $admin = trim((string) getenv("ADMIN"));
+            if ($admin !== "" && !isset($writers[$admin])) {
+                fwrite(STDERR, "::error::variable MARKFLAT_ADMIN names no writer in MARKFLAT_WRITE_KEYS\n");
+                exit(1);
+            }
+            $config = ["data_dir" => "@DATA@", "api" => ["read_key" => strtolower(trim((string) getenv("READ_KEY"))), "write_keys" => $writers, "admin" => $admin]];
             echo "<?php return ", str_replace("\x27@DATA@\x27", "__DIR__.\x27/data\x27", var_export($config, true)), ";\n";
           ' > dist/config.php
           php -l dist/config.php > /dev/null

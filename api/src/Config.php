@@ -10,8 +10,9 @@ namespace Markflat\Api;
  *   return [
  *       'data_dir' => '/path/to/data',
  *       'api' => [
- *           'read_key' => '<sha256 hex of the read key>',
- *           'write_keys' => ['takara' => '<sha256 hex>', …],
+ *           'read_key' => '<sha256 hex of the read key>',     (starting value; the app may replace it)
+ *           'write_keys' => ['taki' => '<sha256 hex>', …],    (bootstrap writers)
+ *           'admin' => 'taki',                                (one of the bootstrap writers)
  *       ],
  *   ];
  */
@@ -22,6 +23,7 @@ final readonly class Config
         public string $dataDir,
         public string $readKey = '',
         public array $writeKeys = [],
+        public string $admin = '',
     ) {
     }
 
@@ -39,10 +41,13 @@ final readonly class Config
             }
         }
 
+        $admin = $api['admin'] ?? '';
+
         return new self(
             rtrim(is_string($dataDir) ? $dataDir : '', '/'),
             is_string($read) && preg_match('/^[0-9a-f]{64}$/i', $read) ? $read : '',
             $writers,
+            is_string($admin) && isset($writers[$admin]) ? $admin : '',
         );
     }
 

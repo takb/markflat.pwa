@@ -22,6 +22,12 @@ use Markflat\Api\Http\Response;
  *   GET    /songs/{slug}/revisions/{id}         one old version's content
  *   POST   /songs/{slug}/revisions/{id}/restore make it current (If-Match unless deleted)
  *   GET    /deleted                             deleted songs that still have a history
+ *
+ * Admin only (D14):
+ *   GET    /keys                                the writers and the read key's age
+ *   POST   /keys                                new writer: {"name": …} → {"name", "key"} (shown once)
+ *   DELETE /keys/{name}                         revoke a writer made in the app
+ *   POST   /read-key                            replace the read key → {"key"} (shown once)
  */
 final readonly class Api
 {
@@ -30,16 +36,20 @@ final readonly class Api
         private Auth $auth,
         private RateLimiter $limiter,
         private \Closure $now,
+        private ?KeyStore $keys = null,
     ) {
     }
 
     public static function fromConfig(Config $config): self
     {
+        $keys = new KeyStore($config->dataDir);
+
         return new self(
             new SongRepository($config->dataDir),
-            new Auth($config->readKey, $config->writeKeys),
+            new Auth($config->readKey, $config->writeKeys, $keys, $config->admin),
             new RateLimiter($config->dataDir.'/.ratelimit'),
             fn (): int => time(),
+            $keys,
         );
     }
 
@@ -80,6 +90,9 @@ final readonly class Api
             'songs/*/revisions/*' => ['GET' => fn () => $this->revision($r, $parts[1], $parts[3])],
             'songs/*/revisions/*/restore' => ['POST' => fn () => $this->restore($r, $parts[1], $parts[3])],
             'deleted' => ['GET' => fn () => $this->deleted($r)],
+            'keys' => ['GET' => fn () => $this->listKeys($r), 'POST' => fn () => $this->createKey($r)],
+            'keys/*' => ['DELETE' => fn () => $this->revokeKey($r, $parts[1])],
+            'read-key' => ['POST' => fn () => $this->replaceReadKey($r)],
         ];
         $methods = $handlers[$route] ?? throw new HttpError(404, 'not_found', 'No such endpoint.');
         $handler = $methods[$r->method] ?? throw new HttpError(405, 'method_not_allowed', 'Method not allowed here.', ['Allow' => implode(', ', array_keys($methods))]);
@@ -91,7 +104,7 @@ final readonly class Api
     {
         $who = $this->identify($r);
 
-        return Response::json(['writer' => $who->writer, 'canWrite' => $who->canWrite()]);
+        return Response::json(['writer' => $who->writer, 'canWrite' => $who->canWrite(), 'isAdmin' => $who->isAdmin]);
     }
 
     private function list(Request $r): Response
@@ -170,6 +183,82 @@ final readonly class Api
         return Response::json(['songs' => $this->songs->deleted()]);
     }
 
+    private function listKeys(Request $r): Response
+    {
+        $this->admin($r);
+        $store = $this->store();
+        $lastUsed = $store->lastUsed();
+        $writers = [];
+        foreach ($this->auth->bootstrapWriters() as $name) {
+            $writers[] = ['name' => $name, 'created' => null, 'by' => null, 'lastUsed' => $lastUsed[$name] ?? null, 'bootstrap' => true];
+        }
+        foreach ($store->writers() as $name => $entry) {
+            $writers[] = ['name' => (string) $name, 'created' => $entry['created'], 'by' => $entry['by'], 'lastUsed' => $lastUsed[$name] ?? null, 'bootstrap' => false];
+        }
+        $read = $store->readKeyInfo();
+
+        return Response::json([
+            'writers' => $writers,
+            'readKey' => $read === null ? ['fromSecret' => true, 'created' => null, 'by' => null] : ['fromSecret' => false] + $read,
+        ]);
+    }
+
+    private function createKey(Request $r): Response
+    {
+        $admin = $this->admin($r);
+        $name = $r->json()['name'] ?? null;
+        if (!is_string($name) || !preg_match(KeyStore::NAME, $name)) {
+            throw new HttpError(422, 'bad_name', 'A writer\'s name may only use a–z, 0–9, _ and - (at most 40).');
+        }
+        if (in_array($name, $this->auth->bootstrapWriters(), true)) {
+            throw new HttpError(409, 'exists', 'A writer with that name exists already.');
+        }
+        $key = Auth::newKey();
+        $this->store()->addWriter($name, Auth::hash($key), $admin, $this->timestamp());
+
+        return Response::json(['name' => $name, 'key' => $key], 201);
+    }
+
+    private function revokeKey(Request $r, string $name): Response
+    {
+        $this->admin($r);
+        if (in_array($name, $this->auth->bootstrapWriters(), true)) {
+            throw new HttpError(409, 'bootstrap', 'This key comes from the server\'s configuration and cannot be revoked here.');
+        }
+        $this->store()->removeWriter($name);
+
+        return new Response(204);
+    }
+
+    private function replaceReadKey(Request $r): Response
+    {
+        $admin = $this->admin($r);
+        $key = Auth::newKey();
+        $this->store()->setReadKey(Auth::hash($key), $admin, $this->timestamp());
+
+        return Response::json(['key' => $key], 201);
+    }
+
+    private function admin(Request $r): string
+    {
+        $who = $this->identify($r);
+        if (!$who->isAdmin || $who->writer === null) {
+            throw new HttpError(403, 'not_admin', 'Only the admin may manage keys.');
+        }
+
+        return $who->writer;
+    }
+
+    private function store(): KeyStore
+    {
+        return $this->keys ?? throw new HttpError(500, 'no_key_store', 'Key management is not set up.');
+    }
+
+    private function timestamp(): string
+    {
+        return gmdate('Y-m-d\TH:i:s\Z', ($this->now)());
+    }
+
     /** The key's owner; a missing or wrong key is a 401 and counts towards the rate limit. */
     private function identify(Request $r): Identity
     {
@@ -183,6 +272,9 @@ final readonly class Api
             $this->limiter->fail($r->clientIp, $now);
 
             throw new HttpError(401, 'unauthorized', 'A valid key is needed (X-Api-Key).');
+        }
+        if ($who->writer !== null) {
+            $this->keys?->touch($who->writer, new \DateTimeImmutable('@'.$now));
         }
 
         return $who;
