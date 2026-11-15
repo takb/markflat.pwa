@@ -1,8 +1,8 @@
 <script setup lang="ts">
     import { ref, computed } from 'vue'
     import { FilterMatchMode } from '@primevue/core/api'
-    import { useToast } from 'primevue/usetoast';
-    import DataTable from 'primevue/datatable'
+    import { useToast } from 'primevue/usetoast'
+    import DataTable, { type DataTableRowClickEvent } from 'primevue/datatable'
     import Column from 'primevue/column'
     import Button from 'primevue/button'
     import Dialog from 'primevue/dialog'
@@ -15,11 +15,11 @@
     import { API_URL } from '../composables/api.ts'
     import useSizes from '../composables/sizes.ts'
 
-    const toast = useToast();
+    const toast = useToast()
     const editMode = ref(false)
     const filters = ref({ global: { value: null, matchMode: FilterMatchMode.CONTAINS } })
     const menu = ref()
-    const settings = ref(false);
+    const settings = ref(false)
     const sizes = useSizes()
     const panelCss = computed(() => {
       return sizes.isMobile.value ? 'h-full w-full' : 'h-full w-8/12 ml-auto mr-auto'
@@ -27,7 +27,7 @@
     const toggle = (event: Event) => {
       menu.value.toggle(event)
     }
-    const viewSong = (event: any) => {
+    const viewSong = (event: DataTableRowClickEvent) => {
       store.show(event.data.id)
     }
     const items = ref([
@@ -36,14 +36,14 @@
         icon: 'pi pi-pencil',
         command: () => {
           editMode.value = !editMode.value
-        }
+        },
       },
       {
         label: 'Settings',
         icon: 'pi pi-cog',
         command: () => {
           settings.value = true
-        }
+        },
       },
       {
         label: 'Download songbook',
@@ -53,9 +53,9 @@
               method: 'POST',
               headers: {
                 'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/x-www-form-urlencoded',
               },
-              body: "key=" + store.apiKeyRead,
+              body: 'key=' + store.apiKeyRead,
             })
             .then(res => {
               res.json().then(value => {
@@ -65,12 +65,12 @@
                 }
                 store.songbook = []
                 let id = 0
-                value.forEach((song: any) => {
+                value.forEach((song: { title: string, artist: string, md: string }) => {
                   store.songbook.push({
                     id: id++,
                     title: song.title,
                     artist: song.artist,
-                    content: song.md
+                    content: song.md,
                   })
                 })
                 store.saveSongbook()
@@ -81,18 +81,18 @@
               console.error(err)
               toast.add({ severity: 'error', summary: 'Download failed', detail: 'Could not download songbook.', life: 3000 })
             })
-        }
-      }
+        },
+      },
     ])
 </script>
 
 <template>
   <div>
-    <DataTable :value="store.songbook"  v-model:filters="filters" :globalFilterFields="['title', 'artist', 'content']" sortField="title" :sortOrder="1" :class="panelCss" scrollable scroll-height="flex" stripedRows removableSort dataKey="id" @row-click="viewSong">
+    <DataTable v-model:filters="filters" :value="store.songbook" :global-filter-fields="['title', 'artist', 'content']" sort-field="title" :sort-order="1" :class="panelCss" scrollable scroll-height="flex" striped-rows removable-sort data-key="id" @row-click="viewSong">
         <template #header>
             <div class="flex justify-between">
-              <Button type="button" icon="pi pi-ellipsis-v" @click="toggle" aria-haspopup="true" aria-controls="overlay_menu" />
-              <Menu ref="menu" id="overlay_menu" :model="items" :popup="true" />
+              <Button type="button" icon="pi pi-ellipsis-v" aria-haspopup="true" aria-controls="overlay_menu" @click="toggle" />
+              <Menu id="overlay_menu" ref="menu" :model="items" :popup="true" />
               <IconField>
                   <InputIcon>
                       <i class="pi pi-search" />
@@ -105,22 +105,22 @@
         <Column field="title" header="Title" class="p-2 flex-grow" sortable />
         <Column field="artist" header="Composer/Interpret" sortable />
         <Column v-if="editMode">
-            <template #header="_slotProps">
-              <Button icon="pi pi-plus" rounded raised @click="() => store.addSong()" class="mr-2" />
+            <template #header>
+              <Button icon="pi pi-plus" rounded raised class="mr-2" @click="() => store.addSong()" />
             </template>
             <template #body="slotProps">
-              <Button icon="pi pi-pencil" rounded raised @click="() => store.edit(slotProps.data.id)" class="mr-2" />
+              <Button icon="pi pi-pencil" rounded raised class="mr-2" @click="() => store.edit(slotProps.data.id)" />
             </template>
         </Column>
     </DataTable>
     <Dialog v-model:visible="settings" modal header="API settings" :style="{ width: '25rem' }">
       <div class="flex items-center gap-4 mb-4">
         <label for="username" class="font-semibold w-24">Read Key</label>
-        <InputText type="password" id="readKey" class="flex-auto" v-model="store.apiKeyRead" autocomplete="off" />
+        <InputText id="readKey" v-model="store.apiKeyRead" type="password" class="flex-auto" autocomplete="off" />
       </div>
       <div class="flex items-center gap-4 mb-8">
         <label for="username" class="font-semibold w-24">Write Key</label>
-        <InputText type="password" id="writeKey" class="flex-auto" v-model="store.apiKeyWrite" autocomplete="off" />
+        <InputText id="writeKey" v-model="store.apiKeyWrite" type="password" class="flex-auto" autocomplete="off" />
       </div>
       <div class="flex justify-end gap-2">
         <Button type="button" label="Cancel" severity="secondary" @click="store.loadApiKeys(); settings = false"></Button>

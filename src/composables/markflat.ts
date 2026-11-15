@@ -1,4 +1,4 @@
-import showdown, {Converter, type ConverterOptions, type ShowdownExtension} from 'showdown';
+import showdown, {Converter, type ConverterOptions, type ShowdownExtension} from 'showdown'
 
 interface MarkflatOptions extends ConverterOptions {
     mbStyle?: string;
@@ -10,101 +10,101 @@ interface MarkflatOptions extends ConverterOptions {
 }
 
 showdown.extension('markflat', (): ShowdownExtension[] => {
-    var artist = {
+    const artist = {
         type: 'lang',
         regex: /(# .*?)\s-\s(.*)$/mg,
-        replace: '$1<span class="mb-artist">$2</span>'
-    };
-    var elements = {
+        replace: '$1<span class="mb-artist">$2</span>',
+    }
+    const elements = {
         type: 'lang',
         filter: function (text: string, converter: Converter) {
             return text.replace(/~(.*?)[ \t]+([\s\S ]*?)(?=~|^\d+\. |^$)/mg, function(_match, block, content) {
-                var ret = '<ul><li list="'+block+'">'+converter.makeHtml(content).replace(/<\/?p>/g, '')+'</li></ul>';
-                return ret;
-            });
-        }
-    };
-    var nbsp = {
+                const ret = '<ul><li list="'+block+'">'+converter.makeHtml(content).replace(/<\/?p>/g, '')+'</li></ul>'
+                return ret
+            })
+        },
+    }
+    const nbsp = {
         type: 'lang',
         regex: /==/g,
-        replace: '&nbsp;&nbsp;'
-    };
-    var chords = {
+        replace: '&nbsp;&nbsp;',
+    }
+    const chords = {
         type: 'lang',
         filter: function (text: string, _converter: Converter, options?: MarkflatOptions) {
             return text.replace(/\{(.+?)\}(.)/g, function(_match: string, p1: string, p2: string) {
-                var chord = p1.replace(/^([a-gA-G][#b+0]?m?)(.*?)(?:\/([a-gA-G][#b]?))?$/g, function(_match, key = '', modifier = '', bass = '') {
+                const chord = p1.replace(/^([a-gA-G][#b+0]?m?)(.*?)(?:\/([a-gA-G][#b]?))?$/g, function(_match, key = '', modifier = '', bass = '') {
                     if (options && typeof options.mbTranspose == 'function' && options.mbTransposeBy != undefined && options.mbTransposeBy != 0) {
-                        key = options.mbTranspose(key, options.mbTransposeBy);
-                        bass = options.mbTranspose(bass, options.mbTransposeBy);
+                        key = options.mbTranspose(key, options.mbTransposeBy)
+                        bass = options.mbTranspose(bass, options.mbTransposeBy)
                     }
                     // Key 
                     key = options && options.mbDetailedChordView ? 
                       key.replace(/^([a-g][#b]?(?!m))$/, '$1'.toUpperCase()+'m')
                         .replace(/0/g, 'dim')
                         .replace(/\+/g, 'aug')
-                      : key;
+                      : key
                     if (options && options.useUnicodeAccidentals)
-                        key = key.replace(/#/g, '\u266F').replace(/(?!^)b/g, '\u266D');
+                        key = key.replace(/#/g, '\u266F').replace(/(?!^)b/g, '\u266D')
 
                     // Modifier
                     modifier = modifier.replace(/(\d+)\+/g, 'maj$1').replace(/^.(2|4)$/g, 'sus$1')
-                    modifier = options && options.mbDetailedChordView ? modifier.replace(/^.0$/, '$1'.toUpperCase()+'m') : modifier;
+                    modifier = options && options.mbDetailedChordView ? modifier.replace(/^.0$/, '$1'.toUpperCase()+'m') : modifier
                     if (options && options.useUnicodeAccidentals)
                         modifier = modifier.replace(/#/g, '\u266F').replace(/b/g, '\u266D')
 
                     // Bass 
                     if (options && options.useUnicodeAccidentals)
                         bass = bass.replace(/#/g, '\u266F').replace(/([a-gA-G])b/g, '$1\u266D')
-                    return key+(modifier ? '<sup>'+modifier+'</sup>' : '')+(bass ? '<sub>/'+bass+'</sub>' : '');
-                });
-                var base = (p2 != '.') ? p2.replace(' ', '&nbsp;&nbsp;&nbsp;') : '';
-                return base ? '<span class="mb-ca"><span class="mb-chord">'+chord+'</span>'+base+'</span>' : '<span class="mb-chord-inline">'+chord+'</span>';
+                    return key+(modifier ? '<sup>'+modifier+'</sup>' : '')+(bass ? '<sub>/'+bass+'</sub>' : '')
+                })
+                const base = (p2 != '.') ? p2.replace(' ', '&nbsp;&nbsp;&nbsp;') : ''
+                return base ? '<span class="mb-ca"><span class="mb-chord">'+chord+'</span>'+base+'</span>' : '<span class="mb-chord-inline">'+chord+'</span>'
             })
             .replace(/\{(\.\.\.|:?\|\|?:?|')\}([a-zA-Z ]|_[a-zA-Z ]_|\.|$)/g, function (_match, tag, base) {
-                base = (base != '.') ? base.replace(' ', '&nbsp;&nbsp;&nbsp;') : '';
-                return base ? '<span class="mb-ca"><span class="mb-chord">'+tag+'</span>'+base+'</span>' : '<span class="mb-chord-inline">…</span>';
-            });
+                base = (base != '.') ? base.replace(' ', '&nbsp;&nbsp;&nbsp;') : ''
+                return base ? '<span class="mb-ca"><span class="mb-chord">'+tag+'</span>'+base+'</span>' : '<span class="mb-chord-inline">…</span>'
+            })
             // .replace(/\{(\.\.\.|:?\|\|?:?|')\}([a-zA-Z ]|_[a-zA-Z ]_|\.|$)/g, function (match, tag, p2) {
             //   var base = (base != '.') ? p2.replace(' ', '&nbsp;&nbsp;&nbsp;') : '';
             //   return base ? '<span class="mb-ca"><span class="mb-chord">'+tag+'</span>'+base+'</span>' : '<span class="mb-chord-inline">…</span>';
             // });
-        }
-    };
-    var styling: ShowdownExtension = {
+        },
+    }
+    const styling: ShowdownExtension = {
         type: 'output',
         filter: function (text: string, _converter: Converter, options?: MarkflatOptions) {
-            return (options?.mbAddStyle ? options.mbStyle : "") + text.replace(/<li(.*?)>([\s\S]*?)<\/li>/g, function (_match, tag, content) {
-                var addClass = content.match(/class="mb-ca"/) ? ' class="mb-has-chords"' : '';
-                return '<li'+addClass+tag+'>'+content+'</li>';
-            });
-        }
-    };
-    return [artist, elements, nbsp, chords, styling];
-});
+            return (options?.mbAddStyle ? options.mbStyle : '') + text.replace(/<li(.*?)>([\s\S]*?)<\/li>/g, function (_match, tag, content) {
+                const addClass = content.match(/class="mb-ca"/) ? ' class="mb-has-chords"' : ''
+                return '<li'+addClass+tag+'>'+content+'</li>'
+            })
+        },
+    }
+    return [artist, elements, nbsp, chords, styling]
+})
 
 showdown.setOption('mbTransposeBy', 0)
 showdown.setOption('mbTranspose', function(key: string, transposeBy: number): string {
         if (key && transposeBy != undefined && transposeBy != 0) {
-            var isMinor = key.match(/^[a-g]/);
-            var scale = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            const isMinor = key.match(/^[a-g]/)
+            let scale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
             if (key.length > 1 && key[key.length - 1] == 'b') {
-                scale = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+                scale = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
             }
-            key = key.length > 1 ? key[0].toUpperCase() + key.substring(1, key.length - 1) : key.toUpperCase();
+            key = key.length > 1 ? key[0].toUpperCase() + key.substring(1, key.length - 1) : key.toUpperCase()
             if (scale.indexOf(key) >= 0) {
-                var i = (scale.indexOf(key) + transposeBy) % scale.length;
-                key = scale[ i < 0 ? i + scale.length : i ];
+                const i = (scale.indexOf(key) + transposeBy) % scale.length
+                key = scale[ i < 0 ? i + scale.length : i ]
                 if (isMinor) {
-                    key = key.toLowerCase();
+                    key = key.toLowerCase()
                 }
             }
         }
-        return key;
-    });
-showdown.setOption('useUnicodeAccidentals', true);
-showdown.setOption('mbDetailedChordView', false);
-showdown.setOption('mbAddStyle', true);
+        return key
+    })
+showdown.setOption('useUnicodeAccidentals', true)
+showdown.setOption('mbDetailedChordView', false)
+showdown.setOption('mbAddStyle', true)
 showdown.setOption('mbStyle', `<style>
     .mb {
       position: relative;
@@ -164,6 +164,6 @@ showdown.setOption('mbStyle', `<style>
       font-style: normal;
       text-decoration: underline;
     }
-  </style>`);
+  </style>`)
 
 export default showdown

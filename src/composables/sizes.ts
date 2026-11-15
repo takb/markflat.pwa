@@ -1,10 +1,10 @@
-import { onMounted, onUnmounted, reactive, toRefs } from "vue";
+import { onMounted, onUnmounted, reactive, toRefs } from 'vue'
 
 const useSizes = () => {
     const sizes = reactive({
         browserWidth: window.innerWidth,
         deviceWidth: screen.width,
-        isMobile: false
+        isMobile: false,
     })
 
     
@@ -33,4 +33,4 @@ const useSizes = () => {
     }
 }
 
-export default useSizes;
+export default useSizes

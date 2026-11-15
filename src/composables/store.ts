@@ -24,7 +24,7 @@ class Store {
     }
     setContent(content: string) {
         if (this.selected) {
-            const matched = content.match(/^#\w*(.+)\w*-\w*(.+)( \(.+?\))?/);
+            const matched = content.match(/^#\w*(.+)\w*-\w*(.+)( \(.+?\))?/)
             if (matched) {
                 this.selected.title = matched[1].trim()
                 this.selected.artist = matched[2].trim()
@@ -45,18 +45,18 @@ class Store {
         this.selected = null
     }
     saveSongbook() {
-        localStorage.setItem("songbook", JSON.stringify(this.songbook))
+        localStorage.setItem('songbook', JSON.stringify(this.songbook))
     }
     loadSongbook() {
-        this.songbook = JSON.parse(localStorage.getItem("songbook") || '[]') 
+        this.songbook = JSON.parse(localStorage.getItem('songbook') || '[]') 
     }
     saveApiKeys() {
-        localStorage.setItem("apiKeyRead", this.apiKeyRead)
-        localStorage.setItem("apiKeyWrite", this.apiKeyWrite)
+        localStorage.setItem('apiKeyRead', this.apiKeyRead)
+        localStorage.setItem('apiKeyWrite', this.apiKeyWrite)
     }
     loadApiKeys() {
-        this.apiKeyRead = localStorage.getItem("apiKeyRead") || ''
-        this.apiKeyWrite = localStorage.getItem("apiKeyWrite") || ''
+        this.apiKeyRead = localStorage.getItem('apiKeyRead') || ''
+        this.apiKeyWrite = localStorage.getItem('apiKeyWrite') || ''
     }
     addSong() {
         this.selected = {
