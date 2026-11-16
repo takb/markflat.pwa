@@ -22,10 +22,10 @@ function create(name: string) {
 
 <template>
   <DropdownMenuRoot :modal="false">
-    <DropdownMenuTrigger class="btn btn-ghost min-w-0 max-w-[45vw] shrink justify-start px-2 sm:max-w-64" aria-label="Choose a list" data-testid="list-chooser">
-      <component :is="current ? ListMusic : Music" :size="18" class="shrink-0 text-muted" />
+    <DropdownMenuTrigger class="btn btn-primary min-w-0 max-w-[45vw] shrink justify-start px-2 sm:max-w-64" aria-label="Choose a list" data-testid="list-chooser">
+      <component :is="current ? ListMusic : Music" :size="18" class="shrink-0" />
       <span class="truncate">{{ current?.name ?? 'All songs' }}</span>
-      <ChevronDown :size="16" class="shrink-0 text-muted" />
+      <ChevronDown :size="16" class="shrink-0 opacity-80" />
     </DropdownMenuTrigger>
     <DropdownMenuPortal>
       <DropdownMenuContent class="menu max-h-[70dvh] max-w-[90vw] overflow-y-auto" align="start" :side-offset="6" :collision-padding="8">
