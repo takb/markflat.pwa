@@ -190,9 +190,9 @@ const more = computed<MenuEntry[]>(() => [
       :data-visible="visible"
     >
       <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Back" @click="listName === undefined ? emit('back') : emit('update:index', 0)"><ArrowLeft :size="20" /></ToolbarButton>
-      <ToolbarButton v-if="listName !== undefined" class="flex min-w-0 flex-1 flex-col items-start rounded-md px-1 py-0.5 text-left leading-tight hover:bg-surface" aria-label="To the set list" data-testid="toolbar-list" @click="emit('update:index', 0)">
+      <ToolbarButton v-if="listName !== undefined" class="my-1 flex min-w-0 flex-1 flex-col items-start rounded-md bg-accent px-2 py-0.5 text-left leading-tight text-accent-fg hover:bg-accent-strong" aria-label="To the set list" data-testid="toolbar-list" @click="emit('update:index', 0)">
         <span class="w-full truncate text-sm font-medium">{{ listName }}</span>
-        <span class="text-xs text-muted tabular-nums">{{ shown }}/{{ items.length }}</span>
+        <span class="text-xs tabular-nums opacity-80">{{ shown }}/{{ items.length }}</span>
       </ToolbarButton>
       <ToolbarSeparator v-else class="mx-1 h-6 w-px bg-line" />
       <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Transpose down" @click="transposeBy(-1)"><Minus :size="18" /></ToolbarButton>
