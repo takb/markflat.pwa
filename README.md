@@ -181,16 +181,14 @@ the sync leaves its contents alone, so a deploy never touches the songs. They ar
 repository.
 A manual run is a dry run by default.
 
-The new host is being set up: until the modernisation is done the site is password-protected.
 The workflow lists the repository variable and secrets it needs.
 
 ## Status
 
-The app works. A modernisation is under way: the tooling and dependencies are up to date and the
-tests and CI are in place, the renderer is a markdown-it plugin, the app runs on the new backend
-with per-person keys, and the interface is rebuilt on Reka UI (November 2026). Still to come:
-
-- open markflat.laotravez.de to the public (it is password-protected until then)
+The app runs at [markflat.laotravez.de](https://markflat.laotravez.de); the songbook needs a key
+from its admin. In November 2026 it was modernised: current tooling and dependencies, tests and
+CI, the renderer as a markdown-it plugin, a new backend with named keys and song history, and an
+interface rebuilt on Reka UI.
 
 ## Licence
 

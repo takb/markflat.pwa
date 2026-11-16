@@ -1,8 +1,7 @@
 name: Build and deploy
 
-# main goes to markflat.laotravez.de. Until the switch-over at the end of the modernisation
-# (vault: markflat.pwa/Plan — modernisation) the whole site sits behind a password, on top of
-# the API's own keys.
+# main goes to markflat.laotravez.de. The site is public since the switch-over (2026-11-15);
+# the songs are behind the API's keys.
 on:
   push:
     branches: [main]
@@ -65,21 +64,14 @@ jobs:
       #     php api/bin/new-key.php <name>    (name "read" for the read key)
       # and the repository VARIABLE MARKFLAT_ADMIN: the writer who manages keys in the app (D14),
       # one of the names in MARKFLAT_WRITE_KEYS. Keys made in the app live in data/.keys.json.
-      #   MARKFLAT_HTPASSWD   the login line, made with
-      #     gh secret set MARKFLAT_HTPASSWD --repo takb/markflat.pwa --body "markflat:$(openssl passwd -apr1)"
       # The paths are secrets, not variables, so they stay masked in this public repo's logs.
-      # Without the password the run stops rather than publish an open site.
-      - name: Server configuration and password
+      - name: Server configuration
         if: vars.DEPLOY_ENABLED == 'true'
         env:
-          HTPASSWD: ${{ secrets.MARKFLAT_HTPASSWD }}
-          WEBROOT: ${{ secrets.MARKFLAT_WEBROOT }}
           READ_KEY: ${{ secrets.MARKFLAT_READ_KEY_SHA256 }}
           WRITE_KEYS: ${{ secrets.MARKFLAT_WRITE_KEYS }}
           ADMIN: ${{ vars.MARKFLAT_ADMIN }}
         run: |
-          [ -n "$HTPASSWD" ] || { echo "::error::secret MARKFLAT_HTPASSWD is not set"; exit 1; }
-          [ -n "$WEBROOT" ] || { echo "::error::secret MARKFLAT_WEBROOT is not set"; exit 1; }
           # The songs live in data/ inside the webroot: the host's PHP sees nothing outside its
           # own webroot. data/.htaccess (from public/) denies every request, and so does the
           # rule below in case that file is ever missing.
@@ -107,22 +99,15 @@ jobs:
             echo "<?php return ", str_replace("\x27@DATA@\x27", "__DIR__.\x27/data\x27", var_export($config, true)), ";\n";
           ' > dist/config.php
           php -l dist/config.php > /dev/null
-          printf '%s\n' "$HTPASSWD" > dist/.htpasswd
-          # Plain http is redirected to https BEFORE any login, so the password never travels
-          # unencrypted: the login is only required on https (the proxy header covers a host
-          # that ends TLS in front of Apache). Check after a change: http -> 301, https -> 401.
-          cat > dist/.htaccess <<EOF
+          # The song folder is denied (also by its own .htaccess) and plain http goes to https (the
+          # proxy header covers a host that ends TLS in front of Apache), so keys never travel
+          # unencrypted. Check after a change: http -> 301, data/ -> 403.
+          cat > dist/.htaccess <<'EOF'
           RewriteEngine On
           RewriteRule ^data(/|$) - [F,L]
           RewriteCond %{HTTPS} !=on
           RewriteCond %{HTTP:X-Forwarded-Proto} !=https
           RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-          <If "%{HTTPS} == 'on' || %{HTTP:X-Forwarded-Proto} == 'https'">
-            AuthType Basic
-            AuthName "markflat"
-            AuthUserFile ${WEBROOT%/}/.htpasswd
-            Require valid-user
-          </If>
           EOF
 
       # rclone sync makes the webroot an exact copy of dist/: files the build no longer has are
