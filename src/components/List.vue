@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useEventListener } from '@vueuse/core'
-import { Download, EllipsisVertical, Plus, Search, Settings, X } from '@lucide/vue'
+import { Download, EllipsisVertical, ListPlus, Plus, Search, Settings, X } from '@lucide/vue'
 import { useMainMenu } from '@/composables/mainMenu'
 import { useVisibleSongs } from '@/composables/visibleSongs'
 import { useSettings } from '@/stores/settings'
@@ -19,6 +19,14 @@ const ui = useUi()
 const { items, download, canWrite } = useMainMenu()
 const query = computed({ get: () => ui.query, set: (q: string) => { ui.query = q } })
 const songs = useVisibleSongs()
+
+// The add-to-list menu exists for one row at a time: the row whose icon was tapped last.
+const menuFor = ref<string | null>(null)
+const menuOpen = ref(false)
+function openMenu(slug: string) {
+  menuFor.value = slug
+  menuOpen.value = true
+}
 
 // No browser zoom on the list (only the song page zooms, by its font size). touch-action in the
 // style below covers Chrome and Firefox; Safari on iOS needs its gesture events stopped.
@@ -55,7 +63,10 @@ onBeforeUnmount(() => { ui.listScroll = window.scrollY })
           </span>
           <span v-if="songbook.changed(s.slug)" class="text-xs text-accent" title="Changed here, not uploaded yet" aria-label="changed here">●</span>
         </button>
-        <AddToListMenu :slug="s.slug" :title="s.title || s.slug" />
+        <AddToListMenu v-if="menuFor === s.slug" v-model:open="menuOpen" :slug="s.slug" :title="s.title || s.slug" />
+        <button v-else type="button" class="btn btn-ghost btn-icon shrink-0 text-muted" :aria-label="'Add ' + (s.title || s.slug) + ' to a set list'" @click="openMenu(s.slug)">
+          <ListPlus :size="18" />
+        </button>
       </li>
     </ul>
     <p v-else-if="songbook.list.length" class="p-6 text-center text-muted">No song matches “{{ ui.query }}”.</p>

@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuSeparator, DropdownMenuTrigger } from 'reka-ui'
 import { ListMusic, ListPlus, Plus } from '@lucide/vue'
 import { useSetlists } from '@/stores/setlists'
 import { useToast } from '@/stores/toast'
 import NameDialog from './ui/NameDialog.vue'
 
-// "Add to a set list" on a row of All songs (L6b): the lists, or a new one.
+// "Add to a set list" on a row of All songs (L6b): the lists, or a new one. Mounted only for the
+// row whose icon was tapped (List.vue): one menu and dialog per row made All songs slow to open.
 const props = defineProps<{ slug: string, title: string }>()
+const open = defineModel<boolean>('open', { default: false })
 const sets = useSetlists()
 const toast = useToast()
 const naming = ref(false)
+const trigger = ref<{ $el: HTMLElement }>()
+
+// It replaces the plain icon that was tapped: take over its focus, so it comes back here on close.
+onMounted(() => trigger.value?.$el.focus())
 
 function add(id: string) {
   sets.add(id, props.slug)
@@ -20,8 +26,8 @@ const create = (name: string) => add(sets.create(name))
 </script>
 
 <template>
-  <DropdownMenuRoot :modal="false">
-    <DropdownMenuTrigger class="btn btn-ghost btn-icon shrink-0 text-muted" :aria-label="'Add ' + title + ' to a set list'">
+  <DropdownMenuRoot v-model:open="open" :modal="false">
+    <DropdownMenuTrigger ref="trigger" class="btn btn-ghost btn-icon shrink-0 text-muted" :aria-label="'Add ' + title + ' to a set list'">
       <ListPlus :size="18" />
     </DropdownMenuTrigger>
     <DropdownMenuPortal>

@@ -221,6 +221,8 @@ test('set lists: make one, add, reorder, play, remember the key, replace a missi
   await page.getByRole('button', { name: 'Done' }).click()
   await chooser.click()
   await page.getByRole('menuitem', { name: 'All songs' }).click()
+  // no row carries a menu of its own until its icon is tapped (one per row made the list slow)
+  await expect(page.locator('li [aria-haspopup="menu"]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Add Yesterday to a set list' }).click()
   await page.getByRole('menuitem', { name: /Gig 12\.12\./ }).click()
   await chooser.click()
