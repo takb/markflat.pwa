@@ -7,77 +7,76 @@ namespace Markflat\Api;
 use Markflat\Api\Http\HttpError;
 
 /**
- * The keys made in the app (decision D14): `.keys.json` in the song folder, hashes only.
+ * The keys made in the app (decision D14, named read keys since 2026-11-15): `.keys.json` in the
+ * song folder, hashes only.
  *
- *   {"read": {"hash", "created", "by"} | null,
- *    "writers": {"kim": {"hash", "created", "by"}},
+ *   {"keys": {"kim": {"hash", "role": "write", "created", "by"},
+ *             "band": {"hash", "role": "read", "created", "by"}},
+ *    "sharedRevoked": false,
  *    "lastUsed": {"kim": "2026-11-15T18:00:00Z"}}
  *
- * The keys from config.php (the deploy's secrets) are not in here; Auth combines both.
+ * The keys from config.php (the deploy's secrets: the admin's write key and the shared read key)
+ * are not in here; Auth combines both. `sharedRevoked` retires the shared read key for good, so
+ * a redeploy with the same secret does not bring it back.
+ *
+ * @phpstan-type Entry array{hash: string, role: 'read'|'write', created: string, by: string}
  */
 final class KeyStore
 {
     public const string NAME = '/^[a-z0-9_-]{1,40}$/';
+    public const array ROLES = ['read', 'write'];
 
     public function __construct(private readonly string $dir)
     {
     }
 
-    public function readKey(): ?string
+    /** @return array<string, Entry> */
+    public function keys(): array
     {
-        $read = $this->load()['read'];
-
-        return $read === null ? null : $read['hash'];
+        return $this->load()['keys'];
     }
 
-    /** @return array{created: string, by: string}|null */
-    public function readKeyInfo(): ?array
+    public function sharedRevoked(): bool
     {
-        $read = $this->load()['read'];
-
-        return $read === null ? null : ['created' => $read['created'], 'by' => $read['by']];
+        return $this->load()['sharedRevoked'];
     }
 
-    /** @return array<string, array{hash: string, created: string, by: string}> */
-    public function writers(): array
-    {
-        return $this->load()['writers'];
-    }
-
-    /** @return array<string, string> writer name => time of last use */
+    /** @return array<string, string> key name => time of last use */
     public function lastUsed(): array
     {
         return $this->load()['lastUsed'];
     }
 
-    public function addWriter(string $name, string $hash, string $by, string $now): void
+    /** @param 'read'|'write' $role */
+    public function add(string $name, string $role, string $hash, string $by, string $now): void
     {
-        $this->change(function (array &$data) use ($name, $hash, $by, $now) {
-            if (isset($data['writers'][$name])) {
-                throw new HttpError(409, 'exists', 'A writer with that name exists already.');
+        $this->change(function (array &$data) use ($name, $role, $hash, $by, $now) {
+            if (isset($data['keys'][$name])) {
+                throw new HttpError(409, 'exists', 'A key with that name exists already.');
             }
-            $data['writers'][$name] = ['hash' => $hash, 'created' => $now, 'by' => $by];
+            $data['keys'][$name] = ['hash' => $hash, 'role' => $role, 'created' => $now, 'by' => $by];
         });
     }
 
-    public function removeWriter(string $name): void
+    public function remove(string $name): void
     {
         $this->change(function (array &$data) use ($name) {
-            if (!isset($data['writers'][$name])) {
-                throw new HttpError(404, 'not_found', 'No such writer.');
+            if (!isset($data['keys'][$name])) {
+                throw new HttpError(404, 'not_found', 'No such key.');
             }
-            unset($data['writers'][$name], $data['lastUsed'][$name]);
+            unset($data['keys'][$name], $data['lastUsed'][$name]);
         });
     }
 
-    public function setReadKey(string $hash, string $by, string $now): void
+    public function revokeShared(): void
     {
-        $this->change(function (array &$data) use ($hash, $by, $now) {
-            $data['read'] = ['hash' => $hash, 'created' => $now, 'by' => $by];
+        $this->change(function (array &$data) {
+            $data['sharedRevoked'] = true;
+            unset($data['lastUsed'][Auth::SHARED]);
         });
     }
 
-    /** Records a writer's use, at most once an hour (no file write on every request). */
+    /** Records a key's use, at most once an hour (no file write on every request). */
     public function touch(string $name, \DateTimeImmutable $now): void
     {
         $last = $this->lastUsed()[$name] ?? null;
@@ -90,23 +89,52 @@ final class KeyStore
     }
 
     /**
-     * @return array{read: array{hash: string, created: string, by: string}|null,
-     *               writers: array<string, array{hash: string, created: string, by: string}>,
-     *               lastUsed: array<string, string>}
+     * The file, also in its first format ({"read": …, "writers": …}): writers become write keys,
+     * an app-made read key becomes the read key "shared" and retires the configured one.
+     *
+     * @return array{keys: array<string, Entry>, sharedRevoked: bool, lastUsed: array<string, string>}
      */
     private function load(): array
     {
         $raw = @file_get_contents($this->dir.'/.keys.json');
         $data = $raw === false ? [] : json_decode($raw, true);
         $data = is_array($data) ? $data : [];
-        /** @var array{hash: string, created: string, by: string}|null $read */
-        $read = is_array($data['read'] ?? null) && is_string($data['read']['hash'] ?? null) ? $data['read'] : null;
-        /** @var array<string, array{hash: string, created: string, by: string}> $writers */
-        $writers = is_array($data['writers'] ?? null) ? $data['writers'] : [];
+        $keys = [];
+        foreach (is_array($data['keys'] ?? null) ? $data['keys'] : [] as $name => $entry) {
+            if (is_array($entry) && is_string($entry['hash'] ?? null) && in_array($entry['role'] ?? null, self::ROLES, true)) {
+                $keys[(string) $name] = $this->entry($entry, $entry['role']);
+            }
+        }
+        $revoked = ($data['sharedRevoked'] ?? false) === true;
+        foreach (is_array($data['writers'] ?? null) ? $data['writers'] : [] as $name => $entry) {
+            if (is_array($entry) && is_string($entry['hash'] ?? null)) {
+                $keys[(string) $name] ??= $this->entry($entry, 'write');
+            }
+        }
+        if (is_array($data['read'] ?? null) && is_string($data['read']['hash'] ?? null)) {
+            $keys[Auth::SHARED] ??= $this->entry($data['read'], 'read');
+            $revoked = true;
+        }
         /** @var array<string, string> $lastUsed */
         $lastUsed = is_array($data['lastUsed'] ?? null) ? $data['lastUsed'] : [];
 
-        return ['read' => $read, 'writers' => $writers, 'lastUsed' => $lastUsed];
+        return ['keys' => $keys, 'sharedRevoked' => $revoked, 'lastUsed' => $lastUsed];
+    }
+
+    /**
+     * @param array<mixed>   $entry
+     * @param 'read'|'write' $role
+     *
+     * @return Entry
+     */
+    private function entry(array $entry, string $role): array
+    {
+        return [
+            'hash' => (string) $entry['hash'],
+            'role' => $role,
+            'created' => is_string($entry['created'] ?? null) ? $entry['created'] : '',
+            'by' => is_string($entry['by'] ?? null) ? $entry['by'] : '',
+        ];
     }
 
     /** @param \Closure(array<string, mixed>&): void $change */

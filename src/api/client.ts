@@ -12,17 +12,25 @@ export interface ServerSong {
 }
 
 export interface Me {
+  /** the key's name ("shared" for the read key from the server's configuration) */
+  name: string
+  /** the name changes are recorded under; null for a read key */
   writer: string | null
   canWrite: boolean
   isAdmin: boolean
 }
 
-export interface Writer {
+export type Role = 'read' | 'write'
+
+export interface KeyInfo {
   name: string
+  role: Role
   created: string | null
   by: string | null
   lastUsed: string | null
-  bootstrap: boolean
+  /** from the server's configuration (the deploy's secrets), not made in the app */
+  configured: boolean
+  revocable: boolean
 }
 
 export interface RevisionInfo {
@@ -38,11 +46,6 @@ export interface DeletedSong {
   artist: string
   deletedAt: string
   deletedBy: string
-}
-
-export interface KeyList {
-  writers: Writer[]
-  readKey: { fromSecret: boolean, created: string | null, by: string | null }
 }
 
 /** An error reply of the API, or status 0 when the server could not be reached. */
@@ -101,10 +104,9 @@ export function createApi(getKey: () => string, base: string = API_URL) {
     restore: (slug: string, id: string, etag: string | null) =>
       call<ServerSong>('POST', song(slug) + '/revisions/' + encodeURIComponent(id) + '/restore', undefined, etag),
     deleted: async () => (await call<{ songs: DeletedSong[] }>('GET', '/deleted')).songs,
-    keys: () => call<KeyList>('GET', '/keys'),
-    createKey: (name: string) => call<{ name: string, key: string }>('POST', '/keys', { name }),
+    keys: async () => (await call<{ keys: KeyInfo[] }>('GET', '/keys')).keys,
+    createKey: (name: string, role: Role) => call<{ name: string, role: Role, key: string }>('POST', '/keys', { name, role }),
     revokeKey: (name: string) => call<void>('DELETE', '/keys/' + encodeURIComponent(name)),
-    newReadKey: () => call<{ key: string }>('POST', '/read-key'),
   }
 }
 

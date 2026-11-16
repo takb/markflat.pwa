@@ -30,7 +30,7 @@ export function installFakeApi(initial: Record<string, string> = {}, key = 'writ
     if (headers['X-Api-Key'] !== key) return error(401, 'unauthorized')
     const ifMatch = headers['If-Match'] ?? null
     const body = init.body ? JSON.parse(String(init.body)) : {}
-    if (path === '/me') return json(200, { writer: 'kim', canWrite: true, isAdmin: false })
+    if (path === '/me') return json(200, { name: 'kim', writer: 'kim', canWrite: true, isAdmin: false })
     if (path === '/songs') return json(200, { songs: [...api.songs.keys()].sort().map(song) })
     const rv = /^\/songs\/([^/]+)\/revisions\/([^/]+)\/restore$/.exec(path)
     if (rv && method === 'POST') {

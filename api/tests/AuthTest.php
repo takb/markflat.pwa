@@ -14,8 +14,9 @@ final class AuthTest extends TestCase
     {
         $auth = new Auth(Auth::hash('r-key'), ['takara' => Auth::hash('t-key'), 'kim' => strtoupper(Auth::hash('k-key'))]);
 
-        self::assertNull($auth->identify('r-key')?->writer);
-        self::assertFalse($auth->identify('r-key')?->canWrite());
+        $reader = $auth->identify('r-key');
+        self::assertNotNull($reader);
+        self::assertSame([Auth::SHARED, null, false], [$reader->name, $reader->writer, $reader->canWrite]);
         self::assertSame('takara', $auth->identify('t-key')?->writer);
         self::assertSame('kim', $auth->identify('k-key')?->writer);
         self::assertNull($auth->identify('wrong'));

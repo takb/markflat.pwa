@@ -43,8 +43,8 @@ final class ApiTest extends TestCase
     {
         self::assertSame(401, $this->call('GET', '/songs', null)->status);
         self::assertSame(401, $this->call('GET', '/songs', 'wrong')->status);
-        self::assertSame(['writer' => null, 'canWrite' => false, 'isAdmin' => false], $this->call('GET', '/me', 'read')->data());
-        self::assertSame(['writer' => 'kim', 'canWrite' => true, 'isAdmin' => false], $this->call('GET', '/me')->data());
+        self::assertSame(['name' => 'shared', 'writer' => null, 'canWrite' => false, 'isAdmin' => false], $this->call('GET', '/me', 'read')->data());
+        self::assertSame(['name' => 'kim', 'writer' => 'kim', 'canWrite' => true, 'isAdmin' => false], $this->call('GET', '/me')->data());
         self::assertSame(403, $this->call('PUT', '/songs/x', 'read', ['content' => '# A - B'])->status);
     }
 

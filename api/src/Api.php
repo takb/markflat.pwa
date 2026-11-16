@@ -9,8 +9,8 @@ use Markflat\Api\Http\Request;
 use Markflat\Api\Http\Response;
 
 /**
- * The songbook API. Every request needs a key in the X-Api-Key header: the shared read key
- * reads, a writer's own key also writes (and is recorded with each change).
+ * The songbook API. Every request needs a key in the X-Api-Key header. Every key has a name; a
+ * read key reads, a write key also writes (and its name is recorded with each change).
  *
  *   GET    /me                                  who the key belongs to
  *   GET    /songs                               all songs, with content and ETag
@@ -24,10 +24,9 @@ use Markflat\Api\Http\Response;
  *   GET    /deleted                             deleted songs that still have a history
  *
  * Admin only (D14):
- *   GET    /keys                                the writers and the read key's age
- *   POST   /keys                                new writer: {"name": …} → {"name", "key"} (shown once)
- *   DELETE /keys/{name}                         revoke a writer made in the app
- *   POST   /read-key                            replace the read key → {"key"} (shown once)
+ *   GET    /keys                                every key: name, role, made when and by whom, last use
+ *   POST   /keys                                new key: {"name", "role": "read"|"write"} → {"name", "role", "key"} (shown once)
+ *   DELETE /keys/{name}                         revoke a key (not the admin's; "shared" = the configured read key)
  */
 final readonly class Api
 {
@@ -92,7 +91,6 @@ final readonly class Api
             'deleted' => ['GET' => fn () => $this->deleted($r)],
             'keys' => ['GET' => fn () => $this->listKeys($r), 'POST' => fn () => $this->createKey($r)],
             'keys/*' => ['DELETE' => fn () => $this->revokeKey($r, $parts[1])],
-            'read-key' => ['POST' => fn () => $this->replaceReadKey($r)],
         ];
         $methods = $handlers[$route] ?? throw new HttpError(404, 'not_found', 'No such endpoint.');
         $handler = $methods[$r->method] ?? throw new HttpError(405, 'method_not_allowed', 'Method not allowed here.', ['Allow' => implode(', ', array_keys($methods))]);
@@ -104,7 +102,7 @@ final readonly class Api
     {
         $who = $this->identify($r);
 
-        return Response::json(['writer' => $who->writer, 'canWrite' => $who->canWrite(), 'isAdmin' => $who->isAdmin]);
+        return Response::json(['name' => $who->name, 'writer' => $who->writer, 'canWrite' => $who->canWrite, 'isAdmin' => $who->isAdmin]);
     }
 
     private function list(Request $r): Response
@@ -188,55 +186,56 @@ final readonly class Api
         $this->admin($r);
         $store = $this->store();
         $lastUsed = $store->lastUsed();
-        $writers = [];
+        $keys = [];
         foreach ($this->auth->bootstrapWriters() as $name) {
-            $writers[] = ['name' => $name, 'created' => null, 'by' => null, 'lastUsed' => $lastUsed[$name] ?? null, 'bootstrap' => true];
+            $keys[] = ['name' => $name, 'role' => 'write', 'created' => null, 'by' => null, 'lastUsed' => $lastUsed[$name] ?? null, 'configured' => true, 'revocable' => false];
         }
-        foreach ($store->writers() as $name => $entry) {
-            $writers[] = ['name' => (string) $name, 'created' => $entry['created'], 'by' => $entry['by'], 'lastUsed' => $lastUsed[$name] ?? null, 'bootstrap' => false];
+        if ($this->auth->sharedActive()) {
+            $keys[] = ['name' => Auth::SHARED, 'role' => 'read', 'created' => null, 'by' => null, 'lastUsed' => $lastUsed[Auth::SHARED] ?? null, 'configured' => true, 'revocable' => true];
         }
-        $read = $store->readKeyInfo();
+        foreach ($store->keys() as $name => $entry) {
+            if (!in_array((string) $name, $this->auth->bootstrapWriters(), true)) {
+                $keys[] = ['name' => (string) $name, 'role' => $entry['role'], 'created' => $entry['created'], 'by' => $entry['by'], 'lastUsed' => $lastUsed[$name] ?? null, 'configured' => false, 'revocable' => true];
+            }
+        }
 
-        return Response::json([
-            'writers' => $writers,
-            'readKey' => $read === null ? ['fromSecret' => true, 'created' => null, 'by' => null] : ['fromSecret' => false] + $read,
-        ]);
+        return Response::json(['keys' => $keys]);
     }
 
     private function createKey(Request $r): Response
     {
         $admin = $this->admin($r);
-        $name = $r->json()['name'] ?? null;
+        $body = $r->json();
+        $name = $body['name'] ?? null;
+        $role = $body['role'] ?? null;
         if (!is_string($name) || !preg_match(KeyStore::NAME, $name)) {
-            throw new HttpError(422, 'bad_name', 'A writer\'s name may only use a–z, 0–9, _ and - (at most 40).');
+            throw new HttpError(422, 'bad_name', 'A key\'s name may only use a–z, 0–9, _ and - (at most 40).');
         }
-        if (in_array($name, $this->auth->bootstrapWriters(), true)) {
-            throw new HttpError(409, 'exists', 'A writer with that name exists already.');
+        if (!in_array($role, KeyStore::ROLES, true)) {
+            throw new HttpError(422, 'bad_role', 'The role is "read" or "write".');
+        }
+        if (in_array($name, $this->auth->bootstrapWriters(), true) || ($name === Auth::SHARED && $this->auth->sharedActive())) {
+            throw new HttpError(409, 'exists', 'A key with that name exists already.');
         }
         $key = Auth::newKey();
-        $this->store()->addWriter($name, Auth::hash($key), $admin, $this->timestamp());
+        $this->store()->add($name, $role, Auth::hash($key), $admin, $this->timestamp());
 
-        return Response::json(['name' => $name, 'key' => $key], 201);
+        return Response::json(['name' => $name, 'role' => $role, 'key' => $key], 201);
     }
 
     private function revokeKey(Request $r, string $name): Response
     {
         $this->admin($r);
         if (in_array($name, $this->auth->bootstrapWriters(), true)) {
-            throw new HttpError(409, 'bootstrap', 'This key comes from the server\'s configuration and cannot be revoked here.');
+            throw new HttpError(409, 'bootstrap', 'The admin\'s key comes from the server\'s configuration and cannot be revoked here.');
         }
-        $this->store()->removeWriter($name);
+        if ($name === Auth::SHARED && $this->auth->sharedActive()) {
+            $this->store()->revokeShared();
+        } else {
+            $this->store()->remove($name);
+        }
 
         return new Response(204);
-    }
-
-    private function replaceReadKey(Request $r): Response
-    {
-        $admin = $this->admin($r);
-        $key = Auth::newKey();
-        $this->store()->setReadKey(Auth::hash($key), $admin, $this->timestamp());
-
-        return Response::json(['key' => $key], 201);
     }
 
     private function admin(Request $r): string
@@ -273,9 +272,7 @@ final readonly class Api
 
             throw new HttpError(401, 'unauthorized', 'A valid key is needed (X-Api-Key).');
         }
-        if ($who->writer !== null) {
-            $this->keys?->touch($who->writer, new \DateTimeImmutable('@'.$now));
-        }
+        $this->keys?->touch($who->name, new \DateTimeImmutable('@'.$now));
 
         return $who;
     }

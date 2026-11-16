@@ -15,7 +15,13 @@ namespace Markflat\Api;
  */
 final readonly class Auth
 {
-    /** @param array<string, string> $writeKeys bootstrap writer name => SHA-256 hex of the key */
+    /** The name of the read key from the server's configuration. */
+    public const string SHARED = 'shared';
+
+    /**
+     * @param string                $readKey   SHA-256 hex of the shared read key ('' = none)
+     * @param array<string, string> $writeKeys bootstrap writer name => SHA-256 hex of the key
+     */
     public function __construct(
         private string $readKey,
         private array $writeKeys,
@@ -45,25 +51,27 @@ final readonly class Auth
         // Check every entry, so the time taken does not tell which one matched.
         foreach ($this->writeKeys as $name => $expected) {
             if (hash_equals(strtolower($expected), $hash)) {
-                $found = new Identity((string) $name, $this->admin !== '' && $name === $this->admin);
+                $found = new Identity((string) $name, true, $this->admin !== '' && $name === $this->admin);
             }
         }
-        foreach ($this->store?->writers() ?? [] as $name => $entry) {
+        foreach ($this->store?->keys() ?? [] as $name => $entry) {
             if (hash_equals(strtolower($entry['hash']), $hash) && !isset($this->writeKeys[$name])) {
-                $found ??= new Identity((string) $name);
+                $found ??= new Identity((string) $name, $entry['role'] === 'write');
             }
         }
-        $read = $this->currentReadKey();
-        if ($read !== '' && hash_equals(strtolower($read), $hash)) {
-            $found ??= new Identity(null);
+        if ($this->sharedActive() && hash_equals(strtolower($this->readKey), $hash)) {
+            $found ??= new Identity(self::SHARED, false);
         }
 
         return $found;
     }
 
-    public function currentReadKey(): string
+    /** Whether the configured read key still works (not revoked, no app-made key took its name). */
+    public function sharedActive(): bool
     {
-        return $this->store?->readKey() ?? $this->readKey;
+        return $this->readKey !== ''
+            && !($this->store?->sharedRevoked() ?? false)
+            && !isset($this->store?->keys()[self::SHARED]);
     }
 
     /** @return list<string> */

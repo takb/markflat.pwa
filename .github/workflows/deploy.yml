@@ -85,7 +85,7 @@ jobs:
           # rule below in case that file is ever missing.
           # The API's keys (hashes only). Without them the API answers every request with 401.
           READ_KEY=$(printf '%s' "$READ_KEY" | tr -d '[:space:]')
-          [ -n "$READ_KEY" ] || echo "::warning::secret MARKFLAT_READ_KEY_SHA256 is not set: the new API lets nobody in"
+          [ -n "$READ_KEY" ] || echo "::notice::secret MARKFLAT_READ_KEY_SHA256 is not set: no shared read key, readers need keys made in the app"
           [ -z "$READ_KEY" ] || [[ "$READ_KEY" =~ ^[0-9a-fA-F]{64}$ ]] || { echo "::error::secret MARKFLAT_READ_KEY_SHA256 must be just the 64-character hash"; exit 1; }
           export READ_KEY
           php -r '

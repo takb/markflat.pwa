@@ -97,25 +97,40 @@ test('a save over a change made elsewhere asks which version stays', async ({ pa
   expect(saved).not.toContain('from another device')
 })
 
-test('the admin creates and revokes a write key', async ({ page }) => {
+test('the admin makes and revokes named read and write keys', async ({ page }) => {
   await open(page, 'e2e-admin')
   await menu(page, 'Keys')
-  await page.getByRole('button', { name: 'New write key' }).click()
-  await page.locator('#writerName').fill('lou')
-  await page.getByRole('button', { name: 'Create' }).click()
-  const key = await page.getByTestId('new-key').inputValue()
-  expect(key).toMatch(/^[A-Za-z0-9_-]{32}$/)
-  await page.getByRole('button', { name: 'Done' }).click()
-  const row = page.locator('[data-writer="lou"]')
-  await expect(row).toContainText('by admin')
+  const make = async (name: string, role: 'Read' | 'Read and write') => {
+    await page.getByRole('button', { name: 'New key' }).click()
+    await page.locator('#keyName').fill(name)
+    await page.getByRole('dialog').getByRole('button', { name: role, exact: true }).click()
+    await page.getByRole('button', { name: 'Create' }).click()
+    const key = await page.getByTestId('new-key').inputValue()
+    expect(key).toMatch(/^[A-Za-z0-9_-]{32}$/)
+    await page.getByRole('button', { name: 'Done' }).click()
+    return key
+  }
+  const me = async (key: string) => {
+    const r = await page.request.get('/api/me', { headers: { 'X-Api-Key': key } })
+    return r.status() === 200 ? await r.json() : r.status()
+  }
+  const revoke = async (name: string) => {
+    await page.locator(`[data-key-name="${name}"]`).getByRole('button', { name: 'Revoke' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Revoke' }).click()
+    await expect(page.locator(`[data-key-name="${name}"]`)).toHaveCount(0)
+  }
 
-  const lou = await page.request.get('/api/me', { headers: { 'X-Api-Key': key } })
-  expect(await lou.json()).toEqual({ writer: 'lou', canWrite: true, isAdmin: false })
+  const lou = await make('lou', 'Read and write')
+  const band = await make('band', 'Read')
+  await expect(page.locator('[data-key-name="lou"]')).toContainText('Writes')
+  await expect(page.locator('[data-key-name="band"]')).toContainText('by admin')
+  await expect(page.locator('[data-key-name="admin"]').getByRole('button', { name: 'Revoke' })).toHaveCount(0)
+  expect(await me(lou)).toEqual({ name: 'lou', writer: 'lou', canWrite: true, isAdmin: false })
+  expect(await me(band)).toEqual({ name: 'band', writer: null, canWrite: false, isAdmin: false })
 
-  await row.getByRole('button', { name: 'Revoke' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Revoke' }).click()
-  await expect(page.locator('[data-writer="lou"]')).toHaveCount(0)
-  expect((await page.request.get('/api/me', { headers: { 'X-Api-Key': key } })).status()).toBe(401)
+  await revoke('lou')
+  await revoke('band')
+  expect([await me(lou), await me(band)]).toEqual([401, 401])
 })
 
 test('on a phone: pinch sets the font size, a swipe transposes, the toolbar hides', async ({ browser, baseURL }) => {

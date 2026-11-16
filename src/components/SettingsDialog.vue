@@ -16,7 +16,9 @@ const keyStatus = ref('')
 const describe = () => {
   const me = settings.me
   if (!me) return ''
-  return me.isAdmin ? 'Writes as ' + me.writer + ' (admin)' : me.writer ? 'Writes as ' + me.writer : 'Reads only'
+  if (me.isAdmin) return 'Writes as ' + me.writer + ' (admin)'
+  if (me.writer) return 'Writes as ' + me.writer
+  return me.name && me.name !== 'shared' ? 'Reads as ' + me.name : 'Reads (the shared read key)'
 }
 
 watch(open, o => {

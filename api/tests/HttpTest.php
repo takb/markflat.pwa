@@ -92,7 +92,7 @@ final class HttpTest extends TestCase
 
         // Without URL rewriting the script name is part of the path.
         [$status, , $me] = $this->request('GET', '/index.php/me', ['X-Api-Key: read']);
-        self::assertSame([200, ['writer' => null, 'canWrite' => false, 'isAdmin' => false]], [$status, $me]);
+        self::assertSame([200, ['name' => 'shared', 'writer' => null, 'canWrite' => false, 'isAdmin' => false]], [$status, $me]);
 
         [$status] = $this->request('PUT', '/songs/yesterday', ['X-Api-Key: kim-key', 'Content-Type: application/json', 'If-Match: '.$headers['etag']], (string) json_encode(['content' => '# Yesterday - v2']));
         self::assertSame(200, $status);

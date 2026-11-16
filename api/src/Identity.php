@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Markflat\Api;
 
-/** Who a key belongs to: a named writer (maybe the admin), or a reader (the shared read key). */
+/** Who a key belongs to: its name, whether it may write, whether it is the admin's. */
 final readonly class Identity
 {
-    public function __construct(public ?string $writer, public bool $isAdmin = false)
-    {
-    }
+    /** The name to record a change under; null for a key that only reads. */
+    public ?string $writer;
 
-    public function canWrite(): bool
+    public function __construct(public string $name, public bool $canWrite, public bool $isAdmin = false)
     {
-        return $this->writer !== null;
+        $this->writer = $canWrite ? $name : null;
     }
 }

@@ -27,7 +27,8 @@ with two fingers, transpose it to your key.
 - **Offline first**: the songbook lives in the browser's `localStorage`. "Download songbook"
   merges the server's copy in without losing changes made here; changes made offline are
   uploaded later. A song changed on both sides asks which version stays.
-- **Keys**: one read key, a write key per person; the admin makes and revokes them in the app.
+- **Keys**: every key has a name and either reads or reads and writes; the admin makes and
+  revokes them in the app.
 - **Light and dark**: follows the system, or set in Settings.
 - **Installable PWA** (service worker via Workbox). When a new version is deployed, the app
   offers a reload.
@@ -133,19 +134,20 @@ The backend is in [api/](api): plain PHP 8 with Composer autoloading and no fram
 `/api/`. Songs are `.mb` files in one folder. Every change keeps the previous version (the
 newest 20 per song), and a deleted song can be brought back.
 
-Every request needs a key in the `X-Api-Key` header. One shared **read key** reads; each writer
-has their own **write key**, which also reads, and is recorded with every change. The server keeps
-only SHA-256 hashes of the keys. The deploy's secrets hold the starting read key and the
-bootstrap writers (`php api/bin/new-key.php <name>` makes a key and its hash); one of them, named
-by the repository variable `MARKFLAT_ADMIN`, is the admin, who creates and revokes the other
-writers' keys and replaces the read key from the app. Those keys are kept in the song folder;
-bootstrap keys cannot be revoked from the app.
+Every request needs a key in the `X-Api-Key` header. Every key has a name: a **read key** reads,
+a **write key** also writes, and its name is recorded with every change. The server keeps only
+SHA-256 hashes of the keys. The deploy's secrets hold the bootstrap writers
+(`php api/bin/new-key.php <name>` makes a key and its hash) and, optionally, a shared read key
+(named `shared`). One bootstrap writer, named by the repository variable `MARKFLAT_ADMIN`, is the
+admin, who makes and revokes all other keys in the app; they are kept in the song folder. The
+bootstrap writers' keys cannot be revoked from the app; the shared read key can, and stays
+revoked after later deploys.
 Ten wrong keys from one address within ten minutes lock that address out for the rest of the
 ten minutes.
 
 | Request | Effect |
 |---|---|
-| `GET /me` | whose key it is: `{writer, canWrite, isAdmin}` |
+| `GET /me` | whose key it is: `{name, writer, canWrite, isAdmin}` (`writer` is null for a read key) |
 | `GET /songs` | all songs: `{songs: [{slug, title, artist, etag, content}]}` |
 | `GET /songs/{slug}` | one song, with its `ETag` |
 | `PUT /songs/{slug}` `{content}` | creates a song, or replaces it with `If-Match: <ETag>` |
@@ -155,10 +157,9 @@ ten minutes.
 | `GET /songs/{slug}/revisions/{id}` | one old version's content |
 | `POST /songs/{slug}/revisions/{id}/restore` | makes it current again (`If-Match`, unless the song was deleted) |
 | `GET /deleted` | deleted songs that can be restored |
-| `GET /keys` | admin: the writers (name, created, by, last used) and the read key's origin |
-| `POST /keys` `{name}` | admin: a new writer; the reply holds the key, shown only this once |
-| `DELETE /keys/{name}` | admin: revokes a writer made in the app |
-| `POST /read-key` | admin: replaces the read key; the reply holds the new key, shown only this once |
+| `GET /keys` | admin: every key (name, role, made when and by whom, last used, from the configuration?, revocable?) |
+| `POST /keys` `{name, role}` | admin: a new key, `role` = `read` or `write`; the reply holds the key, shown only this once |
+| `DELETE /keys/{name}` | admin: revokes a key (not a bootstrap writer's; `shared` = the configured read key) |
 
 A change based on an outdated copy is refused with `412`, never silently overwritten. New song
 names use `a–z`, `0–9`, `_` and `-`. A song may be at most 100 KB.
