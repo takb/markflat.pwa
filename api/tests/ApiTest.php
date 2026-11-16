@@ -121,6 +121,10 @@ final class ApiTest extends TestCase
         self::assertSame(304, $same->status);
         self::assertSame('', $same->body);
 
+        // as the browser sends it back after Apache's compression changed it
+        $gzipped = 'W/'.substr($list->headers['ETag'], 0, -1).'-gzip"';
+        self::assertSame(304, $this->call('GET', '/versions', 'read', headers: ['If-None-Match' => $gzipped])->status);
+
         $this->call('PUT', '/songs/a', json: ['content' => '# A - Z'], headers: ['If-Match' => $a]);
         $changed = $this->call('GET', '/versions', 'read', headers: ['If-None-Match' => $list->headers['ETag']]);
         self::assertSame(200, $changed->status);

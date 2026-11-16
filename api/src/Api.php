@@ -126,7 +126,10 @@ final readonly class Api
             $versions[$song->slug] = $song->etag;
         }
         $etag = Song::etagOf((string) json_encode($versions));
-        if ($r->header('if-none-match') === $etag) {
+        // Apache's compression turns the ETag it sends into "…-gzip" (and may mark it weak):
+        // compare what is left
+        $sent = preg_replace(['/^W\//', '/-(gzip|br|deflate)"$/'], ['', '"'], trim((string) $r->header('if-none-match')));
+        if ($sent === $etag) {
             return new Response(304, '', ['ETag' => $etag]);
         }
 
