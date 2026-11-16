@@ -15,9 +15,22 @@ with two fingers, transpose it to your key.
   A dot marks songs changed on this device and not uploaded yet.
 - **Song view**: chords sit above the syllable they belong to. A toolbar at the bottom (it hides
   while you scroll down) transposes by semitones and shows by how much, sets the font size, and
-  holds ♯/♭ symbols, detailed chord names and the song's history. On a touch screen, pinch to
-  change the font size (the song is laid out again, not magnified) and swipe sideways to
-  transpose. Back (the button, the browser's, or the phone's back gesture) returns to the list.
+  holds ♯/♭ symbols, detailed chord names and the song's history.
+- **Gestures on a song:**
+  - swipe sideways for the previous or next song, in the list's order (and within the search's
+    matches); a tap on the outer edge or the arrow keys do the same;
+  - swipe up or down with two fingers to transpose;
+  - pinch to change the font size (the song is laid out again, not magnified).
+  
+  Back (the button, the browser's, or the phone's back gesture) returns to the list.
+- **Set lists** (kept on the device):
+  - **making and filling one:** named lists ("Gig 12.12."), chosen from the dropdown next to the
+    search; songs added from a dialog or from the list's add icon, the same song twice if
+    wanted; reordered by dragging; renamed, duplicated, deleted.
+  - **playing one:** the list is the first page, and its songs follow as pages to swipe through.
+    A key set while playing is remembered for that entry.
+  - **songs that change elsewhere:** a song deleted on the server stays in the list as
+    "missing", with a Replace button.
 - **Editor** (✎ in the song's toolbar, + in the list, for write keys): CodeMirror with markflat
   highlighting (a brace that is no chord looks different, so typos stand out), undo, search,
   and a live preview, side by side on wide screens and in two tabs on narrow ones. Ctrl/Cmd+S
@@ -74,16 +87,19 @@ package of its own. Raw HTML in a song is shown as text, not run.
 |---|---|
 | `src/App.vue` | switches between the views; the conflict dialog, toasts |
 | `src/stores/songbook.ts` | the songbook (Pinia): songs by name, kept in `localStorage`; download merges, save/delete/rename on the server, conflicts |
+| `src/stores/setlists.ts` | set lists on the device: entries, order, keys per entry, relinking and missing songs |
 | `src/stores/settings.ts` | the key and who it belongs to; this device's zoom, colours, order, chord display |
 | `src/stores/ui.ts` | the current view and song, tied to the browser history (`#/song/<name>`, …) |
 | `src/stores/toast.ts` | short messages |
 | `src/api/client.ts` | the API client (`X-Api-Key`, ETags, errors) |
 | `src/lib/` | the merge rules, the heading parser and file names, search, gesture rules, the editor's markflat highlighting, safe `localStorage` |
-| `src/composables/gestures.ts` | pinch, swipe and tap on a song; the toolbar that hides while scrolling |
+| `src/composables/` | gestures (pinch, two-finger transpose, taps; the toolbar that hides while scrolling), the main menu, the song list as shown |
 | `src/composables/markdown.ts` | the markdown-it instance with the markflat plugin |
 | `packages/markdown-it-markflat/` | the plugin: the markflat syntax, chords, transposition, stylesheet, its tests |
 | `src/components/List.vue`, `SettingsDialog.vue` | the song list, search, menu; settings (key, colours) |
-| `src/components/SongPage.vue`, `SongSheet.vue` | the song page with its toolbar; a rendered song |
+| `src/components/SongPager.vue` | songs as swipeable pages, with the toolbar and the gestures |
+| `src/components/SongPage.vue`, `SetPlayer.vue`, `SongSheet.vue` | a song from All songs; a set list with its songs; a rendered song |
+| `src/components/SetListView.vue`, `ListChooser.vue`, `AddSongDialog.vue`, `AddToListMenu.vue` | a set list's page (drag and drop); the list chooser; adding songs |
 | `src/components/Editor.vue`, `CodeEditor.vue` | the editor page (save, undo all, delete, history); CodeMirror |
 | `src/components/HistoryPage.vue`, `DeletedPage.vue` | a song's older versions; deleted songs |
 | `src/components/ui/` | dialog, menu and toasts on Reka UI |

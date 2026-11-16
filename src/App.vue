@@ -3,6 +3,8 @@ import { defineAsyncComponent } from 'vue'
 import PWABadge from '@/components/PWABadge.vue'
 import List from '@/components/List.vue'
 import SongPage from '@/components/SongPage.vue'
+import SetPlayer from '@/components/SetPlayer.vue'
+import SettingsDialog from '@/components/SettingsDialog.vue'
 import Keys from '@/components/Keys.vue'
 import HistoryPage from '@/components/HistoryPage.vue'
 import DeletedPage from '@/components/DeletedPage.vue'
@@ -22,12 +24,14 @@ if (settings.key) settings.checkKey().catch(() => {})
 
 <template>
   <Editor v-if="ui.view === 'edit' && ui.selected" />
-  <SongPage v-else-if="ui.view === 'show' && ui.selected" :key="ui.selected" />
+  <SongPage v-else-if="ui.view === 'show' && ui.selected" />
+  <SetPlayer v-else-if="ui.view === 'set' && ui.selected" :key="ui.selected" />
   <HistoryPage v-else-if="ui.view === 'history' && ui.selected" :key="ui.selected" />
   <DeletedPage v-else-if="ui.view === 'deleted'" />
   <Keys v-else-if="ui.view === 'keys'" />
   <List v-else />
   <ConflictDialog />
+  <SettingsDialog v-model:open="ui.settingsOpen" />
   <Toasts />
   <PWABadge />
 </template>

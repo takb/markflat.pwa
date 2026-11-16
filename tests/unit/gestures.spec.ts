@@ -1,15 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import { barVisible, swipeDirection } from '@/lib/gestures'
+import { barVisible, swipeSteps, tapZone, twoFingerMode } from '@/lib/gestures'
 
-describe('swipe (transposes on the song page)', () => {
+describe('two fingers: pinch or swipe (L9)', () => {
   it.each([
-    [120, 10, 200, 'right'],
-    [-120, 30, 300, 'left'],
-    [50, 0, 200, null], // too short
-    [120, 80, 200, null], // too diagonal: scrolling
-    [120, 0, 900, null], // too slow: a drag
-  ])('dx %d, dy %d in %d ms → %s', (dx, dy, ms, expected) => {
-    expect(swipeDirection(dx, dy, ms)).toBe(expected)
+    [1.3, 0, 'pinch'],
+    [0.8, 5, 'pinch'],
+    [1.05, -40, 'swipe'],
+    [0.95, 45, 'swipe'],
+    [1.05, 10, null], // undecided yet
+  ])('scale %d, moved %d px → %s', (scale, dy, mode) => {
+    expect(twoFingerMode(scale, dy)).toBe(mode)
+  })
+
+  it('transposes one semitone per 50 px, up is higher', () => {
+    expect(swipeSteps(400, 360)).toBe(0)
+    expect(swipeSteps(400, 340)).toBe(1)
+    expect(swipeSteps(400, 290)).toBe(2)
+    expect(swipeSteps(400, 455)).toBe(-1)
+  })
+})
+
+describe('taps', () => {
+  it('turn the page on the outer tenth, toggle the toolbar in between', () => {
+    expect(tapZone(20, 400)).toBe('previous')
+    expect(tapZone(200, 400)).toBe('middle')
+    expect(tapZone(380, 400)).toBe('next')
   })
 })
 

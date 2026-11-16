@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { devices, expect, test, type Page } from '@playwright/test'
 
 const DATA = 'node_modules/.tmp/e2e-site/data'
@@ -25,7 +25,8 @@ const editSong = async (page: Page, title: string, append: string) => {
   await page.keyboard.press('Control+End')
   await page.keyboard.type(append)
 }
-const chord = (page: Page) => page.locator('.mb .mb-chord').first()
+const sheet = (page: Page) => page.locator('[data-current] .mb')
+const chord = (page: Page) => sheet(page).locator('.mb-chord').first()
 
 test('list → song → transpose → back (read key)', async ({ page }) => {
   const errors: string[] = []
@@ -36,7 +37,7 @@ test('list → song → transpose → back (read key)', async ({ page }) => {
   await page.getByRole('searchbox', { name: 'Search' }).fill('beatles')
   await expect(page.locator('[data-song]')).toHaveCount(1)
   await page.locator('[data-song]', { hasText: 'Yesterday' }).click()
-  await expect(page.locator('.mb h1')).toContainText('The Beatles')
+  await expect(sheet(page).locator('h1')).toContainText('The Beatles')
   await expect(chord(page)).toHaveText('C')
   await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0)
 
@@ -65,7 +66,7 @@ test('edit → save → reload (write key)', async ({ page }) => {
   // The saved song survives a reload (which stays in the editor) and renders the new chord.
   await page.reload()
   await page.getByRole('button', { name: 'Back' }).click()
-  await expect(page.locator('.mb .mb-chord').last()).toHaveText('D')
+  await expect(sheet(page).locator('.mb-chord').last()).toHaveText('D')
 })
 
 test('an old version comes back from the history', async ({ page }) => {
@@ -133,16 +134,16 @@ test('the admin makes and revokes named read and write keys', async ({ page }) =
   expect([await me(lou), await me(band)]).toEqual([401, 401])
 })
 
-test('on a phone: pinch sets the font size, a swipe transposes, the toolbar hides', async ({ browser, baseURL }) => {
+test('on a phone: pinch sets the font size, two fingers transpose, an edge tap turns the page, the toolbar hides', async ({ browser, baseURL }) => {
   const context = await browser.newContext({ ...devices['Pixel 7'], baseURL })
   const page = await context.newPage()
   await open(page, 'e2e-read')
   await page.locator('[data-song]', { hasText: 'Yesterday' }).click()
-  const area = page.locator('.song-area')
+  const current = page.locator('[data-current]')
   await expect(chord(page)).toHaveText('C')
 
   // Fingers on the song, as touch events (what a phone sends).
-  const touch = (type: string, points: [number, number][], changed = points) => area.evaluate((el, a) => {
+  const touch = (type: string, points: [number, number][], changed = points) => current.evaluate((el, a) => {
     const t = (p: number[], i: number) => new Touch({ identifier: i, target: el, clientX: p[0], clientY: p[1] })
     el.dispatchEvent(new TouchEvent(a.type, {
       touches: a.points.map(t), targetTouches: a.points.map(t), changedTouches: a.changed.map(t), bubbles: true, cancelable: true,
@@ -154,21 +155,35 @@ test('on a phone: pinch sets the font size, a swipe transposes, the toolbar hide
   await touch('touchmove', [[100, 300], [300, 300]])
   await page.waitForTimeout(50)
   await touch('touchend', [], [[100, 300], [300, 300]])
-  await expect(page.locator('.mb')).toHaveCSS('font-size', '32px')
+  await expect(sheet(page)).toHaveCSS('font-size', '32px')
 
-  // A quick sideways swipe to the left: one semitone down.
-  await touch('touchstart', [[300, 400]])
-  await touch('touchend', [], [[150, 410]])
-  await expect(chord(page)).toHaveText('B')
+  // Two fingers up by 110 px, their distance unchanged: two semitones up.
+  await touch('touchstart', [[150, 500], [250, 500]])
+  await touch('touchmove', [[150, 460], [250, 460]])
+  await touch('touchmove', [[150, 390], [250, 390]])
+  await touch('touchend', [], [[150, 390], [250, 390]])
+  await expect(chord(page)).toHaveText('D')
+  await expect(page.getByLabel('Transposed by 2, tap to reset')).toHaveText('+2')
 
   // Scrolling down hides the toolbar, scrolling up brings it back.
   const toolbar = page.getByRole('toolbar', { name: 'Song' })
   await expect(toolbar).toHaveAttribute('data-visible', 'true')
-  const scroller = page.locator('.song-area').locator('..')
-  await scroller.evaluate(el => el.scrollBy(0, 300))
+  await current.evaluate(el => el.scrollBy(0, 300))
   await expect(toolbar).toHaveAttribute('data-visible', 'false')
-  await scroller.evaluate(el => el.scrollBy(0, -100))
+  await current.evaluate(el => el.scrollBy(0, -100))
   await expect(toolbar).toHaveAttribute('data-visible', 'true')
+
+  // A tap on the right edge: the next song of the list as shown, with an arrow; back returns
+  // to the list, not to the previous song.
+  const width = page.viewportSize()!.width
+  await page.waitForTimeout(450) // a tap right after a gesture is ignored on purpose
+  const arrowShown = page.waitForSelector('[data-testid="page-arrow"][data-side="next"]', { state: 'attached', timeout: 3000 })
+  await page.mouse.click(width - 10, 300)
+  await arrowShown
+  await expect(page.locator('[data-current]')).toHaveAttribute('data-slug', 'zeta_song')
+  await expect(page).toHaveURL(/#\/song\/zeta_song$/)
+  await page.goBack()
+  await expect(page.locator('[data-song]')).toHaveCount(2)
   await context.close()
 })
 
@@ -184,4 +199,89 @@ test('without a key the empty list says what to do; the list does not zoom', asy
   await expect(page.locator('[data-empty="no-songs"]')).toBeVisible()
   await page.getByRole('button', { name: 'Download songbook' }).click()
   await expect(page.locator('[data-song]')).toHaveCount(2)
+})
+
+test('set lists: make one, add, reorder, play, remember the key, replace a missing song', async ({ page }) => {
+  await open(page, 'e2e-writer')
+  const chooser = page.getByTestId('list-chooser')
+
+  // a new list from the chooser
+  await chooser.click()
+  await page.getByRole('menuitem', { name: 'Add new list…' }).click()
+  await page.locator('#nameInput').fill('Gig 12.12.')
+  await page.getByRole('button', { name: 'Create' }).click()
+  await expect(chooser).toContainText('Gig 12.12.')
+  await expect(page.getByText('This list is empty.')).toBeVisible()
+
+  // songs from the dialog (it stays open) and from a row of All songs
+  await page.getByRole('button', { name: 'Add song' }).click()
+  await page.locator('[data-pick="zeta_song"]').click()
+  await page.locator('[data-pick="yesterday"]').click()
+  await expect(page.getByRole('dialog')).toContainText('2 added')
+  await page.getByRole('button', { name: 'Done' }).click()
+  await chooser.click()
+  await page.getByRole('menuitem', { name: 'All songs' }).click()
+  await page.getByRole('button', { name: 'Add Yesterday to a set list' }).click()
+  await page.getByRole('menuitem', { name: /Gig 12\.12\./ }).click()
+  await chooser.click()
+  await page.getByRole('menuitem', { name: /Gig 12\.12\./ }).click()
+  const rows = page.locator('[data-current] [data-entry]')
+  await expect(rows).toHaveCount(3)
+  expect(await rows.evaluateAll(r => r.map(e => e.getAttribute('data-slug')))).toEqual(['zeta_song', 'yesterday', 'yesterday'])
+
+  // drag and drop: the last Yesterday to the top
+  await rows.nth(2).locator('.handle').dragTo(rows.nth(0).locator('.handle'))
+  await expect.poll(() => rows.evaluateAll(r => r.map(e => e.getAttribute('data-slug')))).toEqual(['yesterday', 'zeta_song', 'yesterday'])
+  await rows.nth(2).getByRole('button', { name: 'Remove from the list' }).click()
+  await expect(rows).toHaveCount(2)
+
+  // play from the second title; the toolbar shows the list and the position
+  await rows.nth(1).getByRole('button', { name: 'Zeta Song' }).click()
+  await expect(page.locator('[data-current]')).toHaveAttribute('data-slug', 'zeta_song')
+  await expect(page.getByTestId('toolbar-list')).toContainText('Gig 12.12.')
+  await expect(page.getByTestId('toolbar-list')).toContainText('2/2')
+  await expect(page).toHaveURL(/#\/set\/[^/]+\/2$/)
+
+  // the arrow keys turn pages; a key set while playing is remembered for the entry
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.locator('[data-current]')).toHaveAttribute('data-slug', 'yesterday')
+  await page.getByRole('button', { name: 'Transpose up' }).click()
+  await expect(chord(page)).toHaveText('C♯')
+  await page.reload()
+  await expect(page.locator('[data-current]')).toHaveAttribute('data-slug', 'yesterday')
+  await expect(chord(page)).toHaveText('C♯')
+
+  // back: the list page, with the key shown; then All songs
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect(page.locator('[data-current][data-page="0"]')).toBeVisible()
+  await expect(rows.nth(0)).toContainText('+1')
+  await page.goBack()
+  await expect(page.locator('[data-song]')).toHaveCount(2)
+
+  // a song deleted on the server: missing in the list, replaced from the dialog
+  rmSync(DATA + '/zeta_song.mb')
+  await menu(page, 'Download songbook')
+  await expect(page.locator('[data-song]')).toHaveCount(1)
+  await chooser.click()
+  await page.getByRole('menuitem', { name: /Gig 12\.12\./ }).click()
+  await expect(rows.nth(1)).toContainText('missing: Zeta Song')
+  await rows.nth(1).getByRole('button', { name: 'Replace' }).click()
+  await page.locator('[data-pick="yesterday"]').click()
+  await expect(rows.nth(1)).not.toHaveAttribute('data-missing')
+
+  // rename, duplicate, delete
+  await page.getByRole('button', { name: 'List actions' }).click()
+  await page.getByRole('menuitem', { name: 'Rename' }).click()
+  await page.locator('#nameInput').fill('Gig 13.12.')
+  await page.getByRole('button', { name: 'Rename' }).click()
+  await expect(chooser).toContainText('Gig 13.12.')
+  await page.getByRole('button', { name: 'List actions' }).click()
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click()
+  await expect(chooser).toContainText('Gig 13.12. (copy)')
+  await page.getByRole('button', { name: 'List actions' }).click()
+  await page.getByRole('menuitem', { name: 'Delete' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await expect(chooser).toContainText('All songs')
+  await chooser.click()
+  await expect(page.getByRole('menuitem', { name: /Gig 13\.12\./ })).toHaveCount(1)
 })
