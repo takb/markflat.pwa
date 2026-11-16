@@ -156,3 +156,17 @@ test('on a phone: pinch sets the font size, a swipe transposes, the toolbar hide
   await expect(toolbar).toHaveAttribute('data-visible', 'true')
   await context.close()
 })
+
+test('without a key the empty list says what to do; the list does not zoom', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('.pwa-toast').getByRole('button', { name: 'Close' }).click({ timeout: 3000 }).catch(() => {})
+  const empty = page.locator('[data-empty="no-key"]')
+  await expect(empty).toContainText('No key entered yet')
+  await expect(page.locator('.list')).toHaveCSS('touch-action', 'pan-x pan-y')
+  await empty.getByRole('button', { name: 'Enter a key' }).click()
+  await page.locator('#apiKey').fill('e2e-read')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.locator('[data-empty="no-songs"]')).toBeVisible()
+  await page.getByRole('button', { name: 'Download songbook' }).click()
+  await expect(page.locator('[data-song]')).toHaveCount(2)
+})

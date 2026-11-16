@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { ArchiveRestore, ArrowDownAZ, Download, EllipsisVertical, KeyRound, Plus, Search, Settings, Upload, X } from '@lucide/vue'
 import { ApiError } from '@/api/client'
 import { compareBy, matches } from '@/lib/search'
@@ -20,6 +21,10 @@ const settingsOpen = ref(false)
 const canWrite = computed(() => settings.me?.canWrite === true)
 
 const songs = computed(() => songbook.list.filter(s => matches(s, query.value)).sort(compareBy(settings.sortBy)))
+
+// No browser zoom on the list (only the song page zooms, by its font size). touch-action in the
+// style below covers Chrome and Firefox; Safari on iOS needs its gesture events stopped.
+useEventListener(document, 'gesturestart', e => e.preventDefault())
 
 // Back from a song: where the list was.
 onMounted(() => nextTick(() => window.scrollTo(0, ui.listScroll)))
@@ -75,7 +80,7 @@ const items = computed<MenuEntry[]>(() => [
 </script>
 
 <template>
-  <div class="mx-auto flex min-h-dvh max-w-2xl flex-col">
+  <div class="list mx-auto flex min-h-dvh max-w-2xl flex-col">
     <header class="sticky top-0 z-20 flex items-center gap-1 border-b border-line bg-bg/95 px-2 py-2 backdrop-blur">
       <AppMenu :items="items" label="Menu"><EllipsisVertical :size="20" /></AppMenu>
       <div class="relative flex-1">
@@ -102,8 +107,22 @@ const items = computed<MenuEntry[]>(() => [
       </li>
     </ul>
     <p v-else-if="songbook.list.length" class="p-6 text-center text-muted">No song matches “{{ query }}”.</p>
-    <p v-else class="p-6 text-center text-muted">No songs yet: enter your key in the settings, then download the songbook.</p>
+    <div v-else-if="!settings.key" class="mx-auto max-w-sm p-6 text-center" data-empty="no-key">
+      <p class="mb-1 font-semibold">No key entered yet</p>
+      <p class="mb-4 text-muted">The songbook needs a key: ask the songbook's admin for one and enter it in the settings. Then download the songbook.</p>
+      <button type="button" class="btn btn-primary" @click="settingsOpen = true"><Settings :size="16" />Enter a key</button>
+    </div>
+    <div v-else class="mx-auto max-w-sm p-6 text-center" data-empty="no-songs">
+      <p class="mb-4 text-muted">No songs on this device yet.</p>
+      <button type="button" class="btn btn-primary" @click="download"><Download :size="16" />Download songbook</button>
+    </div>
 
     <SettingsDialog v-model:open="settingsOpen" />
   </div>
 </template>
+
+<style scoped>
+.list {
+  touch-action: pan-x pan-y;
+}
+</style>

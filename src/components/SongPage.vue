@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { ToolbarButton, ToolbarRoot, ToolbarSeparator } from 'reka-ui'
 import { AArrowDown, AArrowUp, ArrowLeft, Ellipsis, History, Minus, Pencil, Plus } from '@lucide/vue'
 import { useSongGestures, useAutoHide } from '@/composables/gestures'
@@ -38,6 +39,9 @@ useSongGestures(sheet, {
   swipe: dir => transposeBy(dir === 'right' ? 1 : -1),
   tap: toggle,
 })
+
+// Safari on iOS: its own pinch zoom would fight ours.
+useEventListener(document, 'gesturestart', e => e.preventDefault())
 
 const more = computed<MenuEntry[]>(() => [
   { label: 'Detailed chords', checked: settings.detailed, action: () => { settings.detailed = !settings.detailed } },

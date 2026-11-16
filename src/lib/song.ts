@@ -16,13 +16,19 @@ export function parseHeading(content: string): { title: string, artist: string }
   return { title: '', artist: '' }
 }
 
+const GERMAN: Record<string, string> = { ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss', Ä: 'Ae', Ö: 'Oe', Ü: 'Ue', ẞ: 'SS' }
+
 /**
- * The file name (slug) for a new song or a renamed one: the title without "(…)", lowercase,
- * spaces as _, other characters dropped — the rule the app has always used, so existing songs
- * keep their names. A title with nothing left (e.g. only Japanese) falls back to "song".
+ * The file name (slug) for a new or renamed song, from its title: German umlauts and ß spelled
+ * out (ä → ae, ß → ss), other accents dropped (é → e), anything in "(…)" left out, spaces as _,
+ * nothing but a–z, 0–9, _ and - kept. A title with nothing left (e.g. only Japanese) gives
+ * "song". Existing songs keep their names until their title changes.
  */
 export function slugFor(title: string): string {
-  const slug = title.replace(/\(.*\)/g, '').trim().toLowerCase().replace(/\s+/g, '_').replace(/\W+/g, '')
+  const slug = title.replace(/\(.*\)/g, '')
+    .replace(/[äöüßÄÖÜẞ]/g, c => GERMAN[c])
+    .normalize('NFD').replace(/\p{M}/gu, '')
+    .trim().toLowerCase().replace(/\s+/g, '_').replace(/\W+/g, '')
     .replace(/^[_-]+/, '').slice(0, 100)
   return slug || 'song'
 }
