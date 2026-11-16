@@ -53,6 +53,7 @@ The chord functions are exported too: `transposeNote(note, by)`, `parseChord(tex
 | `==` | a wide space |
 | end a line with two spaces | line break inside a verse (standard Markdown) |
 | `_text_` | emphasis (the stylesheet underlines it); a chord may stand right before it |
+| `*text*` | italic (`<i>`); `**text**` is bold as usual |
 
 **Chords.** An uppercase root is major, a lowercase root minor (`{a}` = A minor). `#` or `b`
 after the root is an accidental; `+` is augmented, `0` diminished; `/X` adds a bass note

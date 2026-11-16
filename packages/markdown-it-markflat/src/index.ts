@@ -44,6 +44,9 @@ export default function markflat(md: MarkdownIt, defaults: ChordOptions = {}): v
     return '<span class="mb-ca"><span class="mb-chord">' + html + '</span>' + under + '</span>'
   }
   rules.markflat_space = () => '&nbsp;&nbsp;'
+  // *text* is italic (<i>); _text_ stays emphasis, which the stylesheet underlines
+  rules.em_open = (tokens, idx) => (tokens[idx].markup === '*' ? '<i>' : '<em>')
+  rules.em_close = (tokens, idx) => (tokens[idx].markup === '*' ? '</i>' : '</em>')
   rules.markflat_artist_open = () => '<span class="mb-artist">'
   rules.markflat_artist_close = () => '</span>'
   rules.markflat_block_open = (tokens, idx, _o, _env, self) =>

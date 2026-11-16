@@ -143,3 +143,11 @@ describe('fixed bugs of the old renderer', () => {
     expect(line('{C}_a_')).not.toContain('<em></span>')
   })
 })
+
+describe('emphasis', () => {
+  it('is italic with one asterisk, underlined emphasis with underscores, bold with two asterisks', () => {
+    const md = new MarkdownIt().use(markflat)
+    expect(md.renderInline('*soft* _loud_ **bold** {C}*sing*')).toBe(
+      '<i>soft</i> <em>loud</em> <strong>bold</strong> <span class="mb-ca"><span class="mb-chord">C</span>&#8203;</span><i>sing</i>')
+  })
+})

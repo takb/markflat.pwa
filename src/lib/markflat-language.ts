@@ -1,10 +1,14 @@
 import { HighlightStyle, StreamLanguage, type StringStream } from '@codemirror/language'
-import { tags } from '@lezer/highlight'
+import { Tag, tags } from '@lezer/highlight'
+
+/** *italic*, apart from _emphasis_ (underlined) */
+const italic = Tag.define()
 import { parseChord } from 'markdown-it-markflat'
 
 // markflat highlighting for the editor (B13): the heading, verse numbers, ~labels, chords
 // (a brace that is no chord is a mark and looks quieter, so a chord typo stands out), wide
-// spaces and _emphasis_; the front matter (`---` … `---` at the very top) quietly, as a comment.
+// spaces, _emphasis_, *italic* and **bold**; the front matter (`---` … `---` at the very top)
+// quietly, as a comment.
 
 interface State {
   lineStart: boolean
@@ -47,11 +51,13 @@ export const markflatLanguage = StreamLanguage.define<State>({
     if (brace) return parseChord(brace[1]) ? 'keyword' : 'meta'
     if (stream.match('==')) return 'operator'
     if (stream.match(/^_[^_\n]+_/)) return 'emphasis'
+    if (stream.match(/^\*\*[^*\n]+\*\*/)) return 'strong'
+    if (stream.match(/^\*[^*\n]+\*/)) return 'italic'
     stream.next()
-    stream.eatWhile(/[^{=_\n]/)
+    stream.eatWhile(/[^{=_*\n]/)
     return null
   },
-  tokenTable: { labelName: tags.labelName },
+  tokenTable: { labelName: tags.labelName, italic },
 })
 
 export const markflatHighlight = HighlightStyle.define([
@@ -63,4 +69,6 @@ export const markflatHighlight = HighlightStyle.define([
   { tag: tags.number, color: 'var(--muted)', fontWeight: '600' },
   { tag: tags.operator, color: 'var(--muted)', backgroundColor: 'var(--surface-2)' },
   { tag: tags.emphasis, textDecoration: 'underline' },
+  { tag: italic, fontStyle: 'italic' },
+  { tag: tags.strong, fontWeight: '700' },
 ])
