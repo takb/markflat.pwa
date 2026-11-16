@@ -1,7 +1,9 @@
 import type { MarkdownIt, StateBlock, StateCore, StateInline, Token } from 'markdown-it'
 import { chordHtml, type ChordOptions } from './chords.ts'
+import { frontMatter, songKey } from './key.ts'
 
 export { chordHtml, parseChord, transposeNote, type Chord, type ChordOptions } from './chords.ts'
+export { detectKey, frontMatter, keyName, parseKey, songKey, transposeKey, withKeyField, withoutFrontMatter, type FrontMatter, type Key } from './key.ts'
 
 /**
  * markflat: song sheets in Markdown with chords above the lyrics.
@@ -11,18 +13,28 @@ export { chordHtml, parseChord, transposeNote, type Chord, type ChordOptions } f
  *   ~Ch {a}chorus line         a block labelled "Ch", up to the next ~, verse or blank line
  *   {C}.  {|:}  ==             a chord with no syllable, a repeat mark, a wide space
  *
+ * A front matter block at the very top (`---`, `key: Em`, `---`) is not shown; its key spells
+ * transposed chords (without one, the key is worked out from the chords).
+ *
  * Options for one rendering go in the environment, so one instance serves every view:
  *   md.render(src, { transpose: 2, unicode: true, detailed: false })
  * Plugin options set the defaults. The classes it emits are styled by `markflat.css`.
  */
 export default function markflat(md: MarkdownIt, defaults: ChordOptions = {}): void {
+  md.block.ruler.before('table', 'markflat_front_matter', frontMatterBlock)
   md.block.ruler.before('paragraph', 'markflat_block', labelledBlock, { alt: ['paragraph'] })
   md.inline.ruler.before('emphasis', 'markflat_chord', chord)
   md.inline.ruler.before('emphasis', 'markflat_space', wideSpace)
   md.core.ruler.after('block', 'markflat_artist', artist)
   md.core.ruler.push('markflat_has_chords', hasChords)
+  md.core.ruler.push('markflat_key', state => { (state.env as KeyEnv).markflatKey = songKey(state.src) })
 
-  const options = (env: unknown): ChordOptions => ({ ...defaults, ...(env as ChordOptions) })
+  // the song's key: given in the environment, or the song's own (set by the core rule above)
+  const options = (env: unknown): ChordOptions => {
+    const o: ChordOptions = { ...defaults, ...(env as ChordOptions) }
+    if (o.key === undefined) o.key = (env as KeyEnv).markflatKey ?? null
+    return o
+  }
   const rules = md.renderer.rules
   rules.markflat_chord = (tokens, idx, _o, env) => {
     const { base } = tokens[idx].meta as { base: string | null }
@@ -37,6 +49,17 @@ export default function markflat(md: MarkdownIt, defaults: ChordOptions = {}): v
   rules.markflat_block_open = (tokens, idx, _o, _env, self) =>
     '<ul class="mb-block"><li' + self.renderAttrs(tokens[idx]) + '>'
   rules.markflat_block_close = () => '</li></ul>\n'
+}
+
+interface KeyEnv { markflatKey?: string | null }
+
+// The front matter (`---` … `---` at the very top) is not part of the sheet.
+function frontMatterBlock(state: StateBlock, startLine: number, _endLine: number, silent: boolean): boolean {
+  if (startLine !== 0 || state.blkIndent !== 0) return false
+  const fm = frontMatter(state.src)
+  if (!fm) return false
+  if (!silent) state.line = fm.lines
+  return true
 }
 
 // ~Label text…: from a line that starts with ~ up to the next such line, a numbered verse or a

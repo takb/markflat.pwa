@@ -24,6 +24,10 @@ final class HeadingTest extends TestCase
         // UTF-8 bytes such as 0x85 (in х, ら …) are not line breaks
         yield ["# Gluchari (Глухари) - Александр Розенбаум\r\n1. Глуха{e}ри", 'Gluchari (Глухари)', 'Александр Розенбаум'];
         yield ["# Hotaru no hikari (蛍の光) - Chikai Inagaki \r\n~Chords", 'Hotaru no hikari (蛍の光)', 'Chikai Inagaki'];
+        // the front matter is skipped; one that is never closed is no front matter
+        yield ["---\nkey: Em\n---\n# Let It Be - The Beatles\n1. text", 'Let It Be', 'The Beatles'];
+        yield ["---\r\nkey: G\r\n---\r\n\r\n# Only a title", 'Only a title', ''];
+        yield ["---\nkey: Em\n# Let It Be - The Beatles", '', ''];
     }
 
     #[DataProvider('headings')]

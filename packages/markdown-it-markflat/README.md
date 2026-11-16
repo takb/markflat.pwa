@@ -42,6 +42,7 @@ The chord functions are exported too: `transposeNote(note, by)`, `parseChord(tex
 
 | Syntax | Meaning |
 |---|---|
+| `---` / `key: Em` / `---` | front matter, at the very top only: `name: value` lines between two `---` lines, not shown. `key` is the song's key (below); other fields are ignored |
 | `# Title - Artist` | heading; the part after the first ` - ` is the artist (`<span class="mb-artist">`) |
 | `1.`, `2.` … | numbered verses (a Markdown ordered list) |
 | `~Label text…` | a block labelled by the word after `~`, e.g. `~Ch` for a chorus or `~Coda`. It runs until the next `~` line, numbered verse or blank line; inside a verse it belongs to that verse. A label alone (`~Instrumental`) is fine |
@@ -58,8 +59,21 @@ after the root is an accidental; `+` is augmented, `0` diminished; `/X` adds a b
 (`{D/F#}`, or alone: `{/F#}`). Whatever follows is set as a superscript (`{E7}`, `{a6/9}`), with
 `7+` written as maj7 and `s2`/`s4` as sus2/sus4. German `H` is not recognised as a note.
 
-**Transposing** shifts every root and bass note by semitones. A note written with `b` moves on the
-flat scale, any other on the sharp scale, and minor roots stay lowercase.
+**Keys.** `key:` takes a root with `#`/`b` (or `♯`/`♭`) and `m` for minor: `G`, `Em`, `Bb`,
+`F#m`; a lowercase root is minor too (`e`). A song without a key, or with one that is not a key,
+gets the one its chords suggest (`detectKey`).
+
+**Transposing** shifts every root and bass note by semitones and spells them in the key the song
+ends up in: its common name with at most five accidentals (D♭, not C♯; E♭m, not D♯m; F♯ for a
+major song, E♭m for a minor one), notes outside the key by their usual role (♭II ♭III ♯IV ♭VI ♭VII:
+B♭ and A♭ in C, not A♯ and G♯), and never B♯, E♯, C♭, F♭ or double accidentals. Minor roots stay
+lowercase; untransposed chords stay exactly as written. A key passed in the environment
+(`md.render(src, { transpose: 2, key: 'G' })`) wins over the song's; `key: null` turns the
+spelling off (a `b` note moves on the flat scale, any other on the sharp scale).
+
+The key functions are exported for apps: `frontMatter`, `withoutFrontMatter`, `withKeyField`
+(adds `key:` unless there is one), `parseKey`, `keyName`, `detectKey`, `songKey` (the field, or
+the chords), `transposeKey`.
 
 ## Output
 

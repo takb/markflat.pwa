@@ -58,11 +58,16 @@ onMounted(() => {
   })
 })
 
-// A change from outside (undo all changes, a conflict settled): the editor shows it.
+// A change from outside (undo all changes, a conflict settled, the key added on save): the
+// editor shows it, changing only what differs, so the cursor stays where it was.
 watch(model, text => {
-  if (view && text !== view.state.doc.toString()) {
-    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } })
-  }
+  const doc = view?.state.doc.toString()
+  if (!view || doc === undefined || text === doc) return
+  let from = 0
+  while (from < doc.length && from < text.length && doc[from] === text[from]) from++
+  let end = 0
+  while (end < doc.length - from && end < text.length - from && doc[doc.length - 1 - end] === text[text.length - 1 - end]) end++
+  view.dispatch({ changes: { from, to: doc.length - end, insert: text.slice(from, text.length - end) } })
 })
 
 onBeforeUnmount(() => view?.destroy())

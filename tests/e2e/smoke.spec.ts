@@ -42,8 +42,9 @@ test('list → song → transpose → back (read key)', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Edit' })).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Transpose up' }).click()
-  await expect(chord(page)).toHaveText('C♯')
-  await expect(page.getByLabel('Transposed by 1')).toHaveText('+1')
+  // spelled in the key it is played in: C major up one is D♭ major, shown in the toolbar
+  await expect(chord(page)).toHaveText('D♭')
+  await expect(page.getByTestId('transpose-value')).toHaveText('+1 · D♭')
 
   // The browser's back (the phone's back gesture) goes back to the list, search kept.
   await page.goBack()
@@ -62,6 +63,9 @@ test('edit → save → reload (write key)', async ({ page }) => {
   await expect(page.locator('.cm-content').getByText('{D}')).toHaveCSS('font-weight', '600')
   await page.keyboard.press('Control+s')
   await expect.poll(() => readFileSync(DATA + '/zeta_song.mb', 'utf8')).toContain('2. a new {D}verse')
+  // the first save adds the key, worked out from the chords (a G C D: G), in front of the heading
+  expect(readFileSync(DATA + '/zeta_song.mb', 'utf8')).toMatch(/^---\nkey: G\n---\n# Zeta Song - Tester\n/)
+  await expect(page.locator('.cm-content')).toContainText('key: G')
   await expect(page.getByRole('heading', { name: 'Zeta Song ●' })).toHaveCount(0)
   // The saved song survives a reload (which stays in the editor) and renders the new chord.
   await page.reload()
@@ -163,7 +167,7 @@ test('on a phone: pinch sets the font size, two fingers transpose, an edge tap t
   await touch('touchmove', [[150, 390], [250, 390]])
   await touch('touchend', [], [[150, 390], [250, 390]])
   await expect(chord(page)).toHaveText('D')
-  await expect(page.getByLabel('Transposed by 2, tap to reset')).toHaveText('+2')
+  await expect(page.getByLabel('Transposed by 2, to D, tap to reset')).toHaveText('+2 · D')
 
   // Scrolling down hides the toolbar, scrolling up brings it back.
   const toolbar = page.getByRole('toolbar', { name: 'Song' })
@@ -248,10 +252,10 @@ test('set lists: make one, add, reorder, play, remember the key, replace a missi
   await page.keyboard.press('ArrowLeft')
   await expect(page.locator('[data-current]')).toHaveAttribute('data-slug', 'yesterday')
   await page.getByRole('button', { name: 'Transpose up' }).click()
-  await expect(chord(page)).toHaveText('C♯')
+  await expect(chord(page)).toHaveText('D♭')
   await page.reload()
   await expect(page.locator('[data-current]')).toHaveAttribute('data-slug', 'yesterday')
-  await expect(chord(page)).toHaveText('C♯')
+  await expect(chord(page)).toHaveText('D♭')
 
   // back: the list page, with the key shown; then All songs
   await page.getByRole('button', { name: 'Back' }).click()

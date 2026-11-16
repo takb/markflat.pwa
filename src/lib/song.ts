@@ -1,8 +1,11 @@
-// Title, artist and file name of a song, from its heading "# Title - Artist (capo 2)".
-// The same rules as the server's Heading (api/src/Heading.php), so both sides agree.
+// Title, artist and file name of a song, from its heading "# Title - Artist (capo 2)", the first
+// line after the front matter (`---` … `---`, if any). The same rules as the server's Heading
+// (api/src/Heading.php), so both sides agree.
+
+import { withoutFrontMatter } from 'markdown-it-markflat'
 
 export function parseHeading(content: string): { title: string, artist: string } {
-  for (const line of content.split(/\r\n|\r|\n/)) {
+  for (const line of withoutFrontMatter(content).split(/\r\n|\r|\n/)) {
     if (line.trim() === '') continue
     let m = /^\s{0,3}#+\s*(.+?)\s+-\s+(.+?)\s*$/u.exec(line)
     if (m) {

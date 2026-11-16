@@ -1,5 +1,7 @@
 // Chords: parsing, transposition and display. Pure functions, no markdown-it.
 
+import { spellIn, transposeKey } from './key.ts'
+
 export interface ChordOptions {
   /** semitones to shift every root and bass note by (negative = down) */
   transpose?: number
@@ -7,6 +9,12 @@ export interface ChordOptions {
   unicode?: boolean
   /** spell chords out: a → Am, C0 → Cdim, C+ → Caug */
   detailed?: boolean
+  /**
+   * the song's key (`G`, `Em`): transposed chords are spelled in the key they end up in. The
+   * plugin sets it from the song (its `key:` field, or its chords); without it, a flat note
+   * stays flat and any other becomes sharp.
+   */
+  key?: string | null
 }
 
 const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -14,17 +22,18 @@ const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
 const SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
 /**
- * Shifts a note (a letter A–G, optionally followed by # or b) by `by` semitones. A flat note
- * moves on the flat scale, any other on the sharp scale; a lowercase (minor) note stays
- * lowercase. Anything else is returned unchanged.
+ * Shifts a note (a letter A–G, optionally followed by # or b) by `by` semitones. With the
+ * key it ends up in (`target`), it is spelled in that key; without, a flat note moves on the
+ * flat scale and any other on the sharp scale. A lowercase (minor) note stays lowercase.
+ * Anything else, and any note when `by` is 0, is returned unchanged.
  */
-export function transposeNote(note: string, by: number): string {
+export function transposeNote(note: string, by: number, target?: string | null): string {
   const m = /^([A-Ga-g])([#b]?)$/.exec(note)
   if (!m || !by) return note
   const [, letter, accidental] = m
   const from = SEMITONE[letter.toUpperCase()] + (accidental === '#' ? 1 : accidental === 'b' ? -1 : 0)
   const to = (((from + by) % 12) + 12) % 12
-  const name = (accidental === 'b' ? FLATS : SHARPS)[to]
+  const name = target ? spellIn(to, target) : (accidental === 'b' ? FLATS : SHARPS)[to]
   return letter === letter.toLowerCase() ? name.toLowerCase() : name
 }
 
@@ -65,7 +74,8 @@ export function chordHtml(text: string, o: ChordOptions = {}): string {
   const chord = parseChord(text)
   if (!chord) return escapeHtml(text === '...' ? '…' : text)
   const by = o.transpose ?? 0
-  let root = transposeNote(chord.root, by)
+  const target = by && o.key ? transposeKey(o.key, by) : null
+  let root = transposeNote(chord.root, by, target)
   let quality = chord.quality
   if (o.detailed && root) {
     const minor = root[0] === root[0].toLowerCase()
@@ -76,7 +86,7 @@ export function chordHtml(text: string, o: ChordOptions = {}): string {
   // The root letter itself may be a lowercase b (B minor): only the accidental is converted.
   const rootHtml = root ? root[0] + accidentals(root.slice(1), o) : ''
   const extension = chord.extension.replace(/(\d+)\+/g, 'maj$1').replace(/^.([24])$/, 'sus$1')
-  const bass = transposeNote(chord.bass, by)
+  const bass = transposeNote(chord.bass, by, target)
   return escapeHtml(rootHtml + quality)
     + (extension ? '<sup>' + escapeHtml(accidentals(extension, o)) + '</sup>' : '')
     + (bass ? '<sub>/' + escapeHtml(bass[0] + accidentals(bass.slice(1), o)) + '</sub>' : '')

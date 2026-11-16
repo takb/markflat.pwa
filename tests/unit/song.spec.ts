@@ -11,6 +11,9 @@ describe('parseHeading (the same rules as api/src/Heading.php)', () => {
     ['\n\n# Only a title', 'Only a title', ''],
     ['1. no heading', '', ''],
     ['# Gluchari (Глухари) - Александр Розенбаум\r\n1. Глуха{e}ри', 'Gluchari (Глухари)', 'Александр Розенбаум'],
+    ['---\nkey: Em\n---\n# Let It Be - The Beatles\n1. text', 'Let It Be', 'The Beatles'],
+    ['---\r\nkey: G\r\n---\r\n\r\n# Only a title', 'Only a title', ''],
+    ['---\nkey: Em\n# Let It Be - The Beatles', '', ''],
   ])('%j', (content, title, artist) => {
     expect(parseHeading(content)).toEqual({ title, artist })
   })

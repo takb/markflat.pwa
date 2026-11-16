@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { ToolbarButton, ToolbarRoot, ToolbarSeparator } from 'reka-ui'
 import { AArrowDown, AArrowUp, ArrowLeft, ChevronLeft, ChevronRight, Ellipsis, History, Minus, Pencil, Plus } from '@lucide/vue'
+import { songKey, transposeKey } from 'markdown-it-markflat'
 import { useAutoHide, useSongGestures } from '@/composables/gestures'
 import { tapZone } from '@/lib/gestures'
 import { useSettings } from '@/stores/settings'
@@ -116,6 +117,13 @@ const resetTranspose = () => {
   if (current.value && transpose.value) emit('transpose', shown.value - offset.value, 0)
 }
 const transposeLabel = computed(() => (transpose.value > 0 ? '+' : '') + transpose.value)
+// the key it is played in while transposed (the song's key: its `key:` field or its chords)
+const playedKey = computed(() => {
+  const content = current.value && transpose.value ? song(current.value.slug)?.content : undefined
+  const key = content ? songKey(content) : null
+  const to = key ? transposeKey(key, transpose.value) : null
+  return to && settings.unicode ? to.replace('#', '♯').replace(/(?<=^[A-G])b/, '♭') : to
+})
 const zoomBy = (n: number) => settings.setZoom(settings.zoom + n)
 
 useSongGestures(track, {
@@ -191,11 +199,12 @@ const more = computed<MenuEntry[]>(() => [
       <button
         :key="flash"
         type="button"
-        class="w-9 shrink-0 rounded text-center text-sm font-semibold tabular-nums"
+        class="min-w-9 shrink-0 rounded px-1 text-center text-sm font-semibold whitespace-nowrap tabular-nums"
         :class="[transpose ? 'text-accent' : 'text-muted', flash ? 'flash' : '']"
-        :aria-label="'Transposed by ' + transpose + (transpose ? ', tap to reset' : '')"
+        :aria-label="'Transposed by ' + transpose + (playedKey ? ', to ' + playedKey : '') + (transpose ? ', tap to reset' : '')"
+        data-testid="transpose-value"
         @click="resetTranspose"
-      >{{ transposeLabel }}</button>
+      >{{ transposeLabel }}<span v-if="playedKey" class="font-normal"> · {{ playedKey }}</span></button>
       <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Transpose up" @click="transposeBy(1)"><Plus :size="18" /></ToolbarButton>
       <ToolbarSeparator class="mx-1 h-6 w-px shrink-0 bg-line" />
       <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Smaller" @click="zoomBy(-0.1)"><AArrowDown :size="20" /></ToolbarButton>

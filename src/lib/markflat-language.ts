@@ -4,16 +4,34 @@ import { parseChord } from 'markdown-it-markflat'
 
 // markflat highlighting for the editor (B13): the heading, verse numbers, ~labels, chords
 // (a brace that is no chord is a mark and looks quieter, so a chord typo stands out), wide
-// spaces and _emphasis_.
+// spaces and _emphasis_; the front matter (`---` … `---` at the very top) quietly, as a comment.
 
 interface State {
   lineStart: boolean
+  /** the front matter: may start (first line), inside it, or past it */
+  front: 'start' | 'in' | 'done'
 }
 
 export const markflatLanguage = StreamLanguage.define<State>({
   name: 'markflat',
-  startState: () => ({ lineStart: true }),
+  startState: () => ({ lineStart: true, front: 'start' }),
+  copyState: s => ({ ...s }),
+  blankLine(state: State) {
+    if (state.front === 'start') state.front = 'done'
+  },
   token(stream: StringStream, state: State) {
+    const fence = stream.sol() && stream.string.trimEnd() === '---'
+    if (state.front === 'start') {
+      state.front = fence ? 'in' : 'done'
+      if (fence) {
+        stream.skipToEnd()
+        return 'comment'
+      }
+    } else if (state.front === 'in') {
+      if (fence) state.front = 'done'
+      stream.skipToEnd()
+      return 'comment'
+    }
     if (stream.sol()) state.lineStart = true
     if (state.lineStart) {
       if (stream.eatSpace()) return null
@@ -40,6 +58,7 @@ export const markflatHighlight = HighlightStyle.define([
   { tag: tags.heading, fontWeight: '700', color: 'var(--text)' },
   { tag: tags.keyword, color: 'var(--accent)', fontWeight: '600' },
   { tag: tags.meta, color: 'var(--muted)' },
+  { tag: tags.comment, color: 'var(--muted)', fontStyle: 'italic' },
   { tag: tags.labelName, color: 'var(--accent-strong)', fontStyle: 'italic' },
   { tag: tags.number, color: 'var(--muted)', fontWeight: '600' },
   { tag: tags.operator, color: 'var(--muted)', backgroundColor: 'var(--surface-2)' },

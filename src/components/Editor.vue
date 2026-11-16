@@ -3,6 +3,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle, TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
 import { ArrowLeft, History, RotateCcw, Save, Trash2 } from '@lucide/vue'
+import { detectKey, frontMatter, parseKey, withKeyField } from 'markdown-it-markflat'
 import { ApiError } from '@/api/client'
 import { useSettings } from '@/stores/settings'
 import { useSongbook } from '@/stores/songbook'
@@ -35,8 +36,21 @@ const content = computed({
 
 const reset = () => { if (ui.selected) songbook.reset(ui.selected) }
 
+// The song's key goes into its front matter on save, worked out from the chords, unless it is
+// there already: then it is the writer's, and only checked.
+function addKey() {
+  const stated = frontMatter(content.value)?.fields.key
+  if (stated === undefined) {
+    const key = detectKey(content.value)
+    if (key) content.value = withKeyField(content.value, key)
+  } else if (!parseKey(stated)) {
+    toast.add({ severity: 'warn', summary: 'Key not understood', detail: '“' + stated + '” is no key (write e.g. G, Em, Bb or F#m). Transposing works the key out from the chords meanwhile.', life: 6000 })
+  }
+}
+
 async function save() {
   if (!ui.selected) return
+  addKey()
   try {
     const r = await songbook.save(ui.selected)
     if (r.slug !== ui.selected) ui.renamed(r.slug)

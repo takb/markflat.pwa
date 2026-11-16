@@ -4,13 +4,25 @@ declare(strict_types=1);
 
 namespace Markflat\Api;
 
-/** Title and artist from a song's heading, "# Title - Artist (capo 2)". The one parser for both. */
+/**
+ * Title and artist from a song's heading, "# Title - Artist (capo 2)": its first line after the
+ * front matter ("---" … "---" at the very top, if any). The same rules as the app's parseHeading.
+ */
 final class Heading
 {
     /** @return array{title: string, artist: string} */
     public static function parse(string $content): array
     {
-        foreach (preg_split('/\R/u', $content) ?: [] as $line) {
+        $lines = preg_split('/\R/u', $content) ?: [];
+        if (rtrim($lines[0] ?? '') === '---') {
+            foreach (array_slice($lines, 1, null, true) as $i => $line) {
+                if (rtrim($line) === '---') {
+                    $lines = array_slice($lines, $i + 1);
+                    break;
+                }
+            }
+        }
+        foreach ($lines as $line) {
             if (trim($line) === '') {
                 continue;
             }
