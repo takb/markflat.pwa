@@ -34,6 +34,14 @@ export function installFakeApi(initial: Record<string, string> = {}, key = 'writ
     const body = init.body ? JSON.parse(String(init.body)) : {}
     if (path === '/me') return json(200, { name: 'kim', writer: 'kim', canWrite: true, isAdmin: false })
     if (path === '/songs') return json(200, { songs: [...api.songs.keys()].sort().map(song) })
+    if (path === '/versions') {
+      const versions = Object.fromEntries([...api.songs.keys()].sort().map(slug => [slug, song(slug).etag]))
+      let hash = 0
+      for (const c of JSON.stringify(versions)) hash = (hash * 31 + c.charCodeAt(0)) | 0
+      const etag = '"' + (hash >>> 0).toString(16) + '"'
+      if (headers['If-None-Match'] === etag) return new Response(null, { status: 304, headers: { ETag: etag } })
+      return new Response(JSON.stringify({ versions }), { status: 200, headers: { 'Content-Type': 'application/json', ETag: etag } })
+    }
     const rv = /^\/songs\/([^/]+)\/revisions\/([^/]+)\/restore$/.exec(path)
     if (rv && method === 'POST') {
       const slug = decodeURIComponent(rv[1])

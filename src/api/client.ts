@@ -60,13 +60,11 @@ export class ApiError extends Error {
 }
 
 export function createApi(getKey: () => string, base: string = API_URL) {
-  async function call<T>(method: string, path: string, body?: unknown, ifMatch?: string | null): Promise<T> {
-    const headers: Record<string, string> = { 'X-Api-Key': getKey(), Accept: 'application/json' }
+  async function send(method: string, path: string, body?: unknown, extra: Record<string, string> = {}): Promise<Response> {
+    const headers: Record<string, string> = { 'X-Api-Key': getKey(), Accept: 'application/json', ...extra }
     if (body !== undefined) headers['Content-Type'] = 'application/json'
-    if (ifMatch) headers['If-Match'] = ifMatch
-    let response: Response
     try {
-      response = await fetch(base + path, {
+      return await fetch(base + path, {
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
@@ -75,6 +73,13 @@ export function createApi(getKey: () => string, base: string = API_URL) {
     } catch {
       throw new ApiError(0, 'offline', 'The server could not be reached.')
     }
+  }
+
+  async function call<T>(method: string, path: string, body?: unknown, ifMatch?: string | null): Promise<T> {
+    return read<T>(await send(method, path, body, ifMatch ? { 'If-Match': ifMatch } : {}))
+  }
+
+  async function read<T>(response: Response): Promise<T> {
     if (response.status === 204) return undefined as T
     let data: unknown = null
     try {
@@ -93,6 +98,16 @@ export function createApi(getKey: () => string, base: string = API_URL) {
 
   return {
     me: () => call<Me>('GET', '/me'),
+    /**
+     * Every song's ETag (for noticing changes made elsewhere). `since` is the list's ETag from
+     * the last answer: unchanged, the answer is null.
+     */
+    versions: async (since?: string | null): Promise<{ versions: Record<string, string>, etag: string | null } | null> => {
+      const response = await send('GET', '/versions', undefined, since ? { 'If-None-Match': since } : {})
+      if (response.status === 304) return null
+      const data = await read<{ versions: Record<string, string> }>(response)
+      return { versions: data.versions, etag: response.headers.get('ETag') }
+    },
     songs: async () => (await call<{ songs: ServerSong[] }>('GET', '/songs')).songs,
     song: (slug: string) => call<ServerSong>('GET', song(slug)),
     save: (slug: string, content: string, etag: string | null) => call<ServerSong>('PUT', song(slug), { content }, etag),

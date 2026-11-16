@@ -5,6 +5,7 @@ import { SplitterGroup, SplitterPanel, SplitterResizeHandle, TabsContent, TabsLi
 import { ArrowLeft, History, RotateCcw, Save, Trash2 } from '@lucide/vue'
 import { detectKey, frontMatter, parseKey, withKeyField } from 'markdown-it-markflat'
 import { ApiError } from '@/api/client'
+import { useRemote } from '@/stores/remote'
 import { useSettings } from '@/stores/settings'
 import { useSongbook } from '@/stores/songbook'
 import { useToast } from '@/stores/toast'
@@ -18,6 +19,7 @@ const settings = useSettings()
 const songbook = useSongbook()
 const toast = useToast()
 const ui = useUi()
+const remote = useRemote()
 const wide = useMediaQuery('(min-width: 900px)')
 const tab = ref('text')
 const confirmDelete = ref(false)
@@ -95,6 +97,7 @@ async function deleteSong() {
       <h1 class="min-w-0 flex-1 truncate px-1 font-semibold">
         {{ song.title || ui.selected }}<span v-if="changed" class="text-accent" title="Changed, not on the server yet"> ●</span>
         <span v-if="isNew" class="text-sm font-normal text-muted"> (new)</span>
+        <span v-if="remote.isChanged(ui.selected)" class="text-sm font-normal text-accent" data-testid="changed-elsewhere"> · changed on the server</span>
       </h1>
       <button type="button" class="btn btn-ghost btn-icon" aria-label="Undo all changes" title="Undo all changes" :disabled="!changed || isNew" @click="reset"><RotateCcw :size="18" /></button>
       <button v-if="!isNew" type="button" class="btn btn-ghost btn-icon" aria-label="History" title="History" @click="ui.selected && ui.history(ui.selected)"><History :size="18" /></button>

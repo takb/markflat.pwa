@@ -303,3 +303,36 @@ test('a new song deleted before it was saved: no copy on the server is claimed',
   await expect(page.locator('[data-state=open]', { hasText: 'Deleted' })).toHaveText('DeletedNew song was deleted.')
   await expect(page.locator('[data-song]')).toHaveCount(2)
 })
+
+test('a song changed elsewhere is noticed and synced', async ({ page }) => {
+  await open(page, 'e2e-read')
+  const notice = page.getByTestId('remote-notice')
+  const check = () => page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await check()
+  await expect(notice).toHaveCount(0)
+
+  // another device saves Yesterday
+  const before = readFileSync(DATA + '/yesterday.mb', 'utf8')
+  writeFileSync(DATA + '/yesterday.mb', before.replace('# Yesterday - The Beatles', '# Yesterday - The Beatles\n1. {D}Changed elsewhere'))
+  try {
+    await check()
+    await expect(notice).toContainText('Yesterday changed')
+
+    // while a song plays: no notice over it, a dot on ⋯ and Sync in its menu
+    await page.locator('[data-song]', { hasText: 'Yesterday' }).click()
+    await expect(notice).toHaveCount(0)
+    await expect(page.getByTestId('remote-dot')).toBeVisible()
+    await page.getByRole('button', { name: /More/ }).click()
+    await expect(page.getByRole('menuitem', { name: 'Sync (1 changed)' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.goBack()
+
+    await notice.getByRole('button', { name: 'Sync' }).click()
+    await expect(notice).toHaveCount(0)
+    await page.locator('[data-song]', { hasText: 'Yesterday' }).click()
+    await expect(sheet(page)).toContainText('Changed elsewhere')
+    await expect(page.getByTestId('remote-dot')).toHaveCount(0)
+  } finally {
+    writeFileSync(DATA + '/yesterday.mb', before)
+  }
+})

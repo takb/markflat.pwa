@@ -10,6 +10,8 @@ import HistoryPage from '@/components/HistoryPage.vue'
 import DeletedPage from '@/components/DeletedPage.vue'
 import ConflictDialog from '@/components/ConflictDialog.vue'
 import Toasts from '@/components/ui/Toasts.vue'
+import RemoteNotice from '@/components/RemoteNotice.vue'
+import { useRemotePolling } from '@/composables/remotePolling'
 import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
 
@@ -20,6 +22,8 @@ const ui = useUi()
 
 // Who the key belongs to (for the menus); quietly, the app works offline too.
 if (settings.key) settings.checkKey().catch(() => {})
+// Songs changed elsewhere: asked about every minute, offered for sync.
+useRemotePolling()
 </script>
 
 <template>
@@ -32,6 +36,7 @@ if (settings.key) settings.checkKey().catch(() => {})
   <List v-else />
   <ConflictDialog />
   <SettingsDialog v-model:open="ui.settingsOpen" />
+  <RemoteNotice />
   <Toasts />
   <PWABadge />
 </template>

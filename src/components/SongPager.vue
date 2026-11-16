@@ -2,9 +2,11 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { ToolbarButton, ToolbarRoot, ToolbarSeparator } from 'reka-ui'
-import { AArrowDown, AArrowUp, ArrowLeft, ChevronLeft, ChevronRight, Ellipsis, History, Minus, Pencil, Plus } from '@lucide/vue'
+import { AArrowDown, AArrowUp, ArrowLeft, ChevronLeft, ChevronRight, Ellipsis, History, Minus, Pencil, Plus, RefreshCw } from '@lucide/vue'
 import { songKey, transposeKey } from 'markdown-it-markflat'
 import { useAutoHide, useSongGestures } from '@/composables/gestures'
+import { useMainMenu } from '@/composables/mainMenu'
+import { useRemote } from '@/stores/remote'
 import { tapZone } from '@/lib/gestures'
 import { useSettings } from '@/stores/settings'
 import { useSongbook } from '@/stores/songbook'
@@ -39,6 +41,8 @@ const emit = defineEmits<{
 const settings = useSettings()
 const songbook = useSongbook()
 const ui = useUi()
+const remote = useRemote()
+const { download } = useMainMenu()
 const offset = computed(() => (props.listName === undefined ? 0 : 1))
 const count = computed(() => props.items.length + offset.value)
 const track = ref<HTMLElement>()
@@ -155,7 +159,9 @@ useEventListener(window, 'keydown', (e: KeyboardEvent) => {
 useEventListener(document, 'gesturestart', e => e.preventDefault())
 
 const more = computed<MenuEntry[]>(() => [
-  { label: 'Detailed chords', checked: settings.detailed, action: () => { settings.detailed = !settings.detailed } },
+  // songs changed elsewhere: here only a dot on ⋯ and this entry (RemoteNotice stays away while playing)
+  { label: 'Sync (' + remote.count + ' changed)', icon: RefreshCw, hidden: !remote.count, action: () => { download() } },
+  { label: 'Detailed chords', checked: settings.detailed, separatorBefore: remote.count > 0, action: () => { settings.detailed = !settings.detailed } },
   { label: 'Show ♯ and ♭', checked: settings.unicode, action: () => { settings.unicode = !settings.unicode } },
   { label: 'Reset zoom', action: () => settings.setZoom(1) },
   { label: 'Edit song', icon: Pencil, hidden: props.listName === undefined || !settings.me?.canWrite, separatorBefore: true, action: () => current.value && ui.edit(current.value.slug) },
@@ -211,7 +217,12 @@ const more = computed<MenuEntry[]>(() => [
       <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Larger" @click="zoomBy(0.1)"><AArrowUp :size="20" /></ToolbarButton>
       <span v-if="listName === undefined" class="flex-1" />
       <ToolbarButton v-if="listName === undefined && settings.me?.canWrite" class="btn btn-ghost btn-icon shrink-0" aria-label="Edit" @click="current && ui.edit(current.slug)"><Pencil :size="18" /></ToolbarButton>
-      <AppMenu :items="more" label="More" side="top" align="end"><Ellipsis :size="20" /></AppMenu>
+      <AppMenu :items="more" :label="remote.visible ? 'More (songs changed on the server)' : 'More'" side="top" align="end">
+        <span class="relative">
+          <Ellipsis :size="20" />
+          <span v-if="remote.visible" class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent" data-testid="remote-dot" />
+        </span>
+      </AppMenu>
     </ToolbarRoot>
   </div>
 </template>

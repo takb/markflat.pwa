@@ -14,6 +14,7 @@ use Markflat\Api\Http\Response;
  *
  *   GET    /me                                  who the key belongs to
  *   GET    /songs                               all songs, with content and ETag
+ *   GET    /versions                            every song's ETag only (cheap to poll); If-None-Match → 304
  *   GET    /songs/{slug}                        one song
  *   PUT    /songs/{slug}                        create or replace: {"content": …}, If-Match
  *   DELETE /songs/{slug}                        If-Match
@@ -79,6 +80,7 @@ final readonly class Api
         $handlers = [
             'me' => ['GET' => fn () => $this->me($r)],
             'songs' => ['GET' => fn () => $this->list($r)],
+            'versions' => ['GET' => fn () => $this->versions($r)],
             'songs/*' => [
                 'GET' => fn () => $this->show($r, $parts[1]),
                 'PUT' => fn () => $this->save($r, $parts[1]),
@@ -110,6 +112,25 @@ final readonly class Api
         $this->identify($r);
 
         return Response::json(['songs' => array_map(fn (Song $s) => $s->toArray(), $this->songs->all())]);
+    }
+
+    /**
+     * Every song's ETag, for apps that poll for changes made elsewhere. The list has an ETag of
+     * its own: sent back in If-None-Match, an unchanged list is a 304 without a body.
+     */
+    private function versions(Request $r): Response
+    {
+        $this->identify($r);
+        $versions = [];
+        foreach ($this->songs->all() as $song) {
+            $versions[$song->slug] = $song->etag;
+        }
+        $etag = Song::etagOf((string) json_encode($versions));
+        if ($r->header('if-none-match') === $etag) {
+            return new Response(304, '', ['ETag' => $etag]);
+        }
+
+        return Response::json(['versions' => (object) $versions], 200, ['ETag' => $etag]);
     }
 
     private function show(Request $r, string $slug): Response

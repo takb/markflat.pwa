@@ -105,6 +105,29 @@ final class ApiTest extends TestCase
         self::assertSame(200, $this->call('GET', '/songs/let-it-be', 'read')->status);
     }
 
+    public function testVersionsListEveryEtagAndAnswer304WhenUnchanged(): void
+    {
+        $empty = $this->call('GET', '/versions', 'read');
+        self::assertSame(200, $empty->status);
+        self::assertSame('{"versions":{}}', $empty->body);
+
+        $a = $this->call('PUT', '/songs/a', json: ['content' => '# A - X'])->headers['ETag'];
+        $b = $this->call('PUT', '/songs/b', json: ['content' => '# B - Y'])->headers['ETag'];
+        $list = $this->call('GET', '/versions', 'read');
+        self::assertSame(['versions' => ['a' => $a, 'b' => $b]], $list->data());
+        self::assertStringNotContainsString('# A', $list->body);
+
+        $same = $this->call('GET', '/versions', 'read', headers: ['If-None-Match' => $list->headers['ETag']]);
+        self::assertSame(304, $same->status);
+        self::assertSame('', $same->body);
+
+        $this->call('PUT', '/songs/a', json: ['content' => '# A - Z'], headers: ['If-Match' => $a]);
+        $changed = $this->call('GET', '/versions', 'read', headers: ['If-None-Match' => $list->headers['ETag']]);
+        self::assertSame(200, $changed->status);
+        self::assertNotSame($list->headers['ETag'], $changed->headers['ETag']);
+        self::assertSame(401, $this->call('GET', '/versions', null)->status);
+    }
+
     public function testRoutingErrors(): void
     {
         self::assertSame(404, $this->call('GET', '/nope')->status);
