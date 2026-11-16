@@ -62,10 +62,12 @@ async function deleteSong() {
   confirmDelete.value = false
   if (!ui.selected) return
   const title = song.value?.title || ui.selected
+  // a song the server never had is simply gone: no copy to mention
+  const wasNew = isNew.value
   try {
     await songbook.remove(ui.selected)
     ui.home()
-    toast.add({ severity: 'success', summary: 'Deleted', detail: title + ' was deleted. The server keeps a copy.', life: 4000 })
+    toast.add({ severity: 'success', summary: 'Deleted', detail: title + ' was deleted.' + (wasNew ? '' : ' The server keeps a copy.'), life: 4000 })
   } catch (e) {
     toast.add({ severity: 'error', summary: 'Not deleted', detail: e instanceof ApiError ? e.message : String(e), life: 5000 })
   }

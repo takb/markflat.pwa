@@ -261,9 +261,11 @@ test('set lists: make one, add, reorder, play, remember the key, replace a missi
   await expect(page.locator('[data-song]')).toHaveCount(2)
 
   // a song deleted on the server: missing in the list, replaced from the dialog
+  const zeta = readFileSync(DATA + '/zeta_song.mb', 'utf8')
   rmSync(DATA + '/zeta_song.mb')
   await menu(page, 'Download songbook')
   await expect(page.locator('[data-song]')).toHaveCount(1)
+  writeFileSync(DATA + '/zeta_song.mb', zeta) // back for the tests after this one
   await chooser.click()
   await page.getByRole('menuitem', { name: /Gig 12\.12\./ }).click()
   await expect(rows.nth(1)).toContainText('missing: Zeta Song')
@@ -286,4 +288,14 @@ test('set lists: make one, add, reorder, play, remember the key, replace a missi
   await expect(chooser).toContainText('All songs')
   await chooser.click()
   await expect(page.getByRole('menuitem', { name: /Gig 13\.12\./ })).toHaveCount(1)
+})
+
+test('a new song deleted before it was saved: no copy on the server is claimed', async ({ page }) => {
+  await open(page, 'e2e-writer')
+  await page.getByRole('button', { name: 'New song' }).click()
+  await page.getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByRole('dialog')).not.toContainText('server')
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+  await expect(page.locator('[data-state=open]', { hasText: 'Deleted' })).toHaveText('DeletedNew song was deleted.')
+  await expect(page.locator('[data-song]')).toHaveCount(2)
 })
