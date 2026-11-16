@@ -28,7 +28,7 @@ export default function markflat(md: MarkdownIt, defaults: ChordOptions = {}): v
     const { base } = tokens[idx].meta as { base: string | null }
     const html = chordHtml(tokens[idx].content, options(env))
     if (base === null) return '<span class="mb-chord-inline">' + html + '</span>'
-    const under = base === ' ' ? '&nbsp;&nbsp;&nbsp;' : md.utils.escapeHtml(base)
+    const under = base === ' ' ? '&nbsp;&nbsp;&nbsp;' : base === '' ? '&#8203;' : md.utils.escapeHtml(base)
     return '<span class="mb-ca"><span class="mb-chord">' + html + '</span>' + under + '</span>'
   }
   rules.markflat_space = () => '&nbsp;&nbsp;'
@@ -76,7 +76,8 @@ function labelledBlock(state: StateBlock, startLine: number, endLine: number, si
 // the position but takes no character, so emphasis, links etc. still work after it.
 const SPECIAL = new Set(['_', '*', '{', '[', '\\', '`', '<', '&', '=', '!', '~'])
 
-// {X}c: chord X above the character c; at the end of a line, above the line's end. {X}. is a
+// {X}c: chord X above the character c (and the rest of its word); at the end of a line, above
+// the line's end. {X}. is a
 // chord in the text, with no character under it (the dot is dropped). {X} followed by a space
 // takes a wide gap.
 function chord(state: StateInline, silent: boolean): boolean {
@@ -103,8 +104,12 @@ function chord(state: StateInline, silent: boolean): boolean {
   } else if (SPECIAL.has(ch)) {
     base = ''
   } else {
-    base = ch
-    next += ch.length
+    // the chord takes the rest of the word (letters, digits, marks) up to the next chord, so
+    // the two share one box: a chord wider than its syllables pushes the line apart instead
+    // of overlapping the next chord (B19)
+    const word = /^[\p{L}\p{N}\p{M}]+/u.exec(src.slice(next + ch.length))
+    base = ch + (word ? word[0] : '')
+    next += base.length
   }
   if (!silent) {
     const token = state.push('markflat_chord', '', 0)

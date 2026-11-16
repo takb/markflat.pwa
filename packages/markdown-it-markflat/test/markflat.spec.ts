@@ -18,7 +18,7 @@ describe('chords', () => {
   const cases = [
     '{C}a', '{a}a', '{F#}a', '{Bb}a', '{E7}a', '{a7}a', '{D/F#}a', '{C7+}a', '{Ds4}a', '{As2}a',
     '{C0}a', '{C+}a', '{Gm}a', '{C}.', '{C} a', '{C}_a_', '{...}a', '{||:}a', '{:||}a', "{'}a",
-    '{...}.', '{C}a{G}b',
+    '{...}.', '{C}a{G}b', '{C}yester{G}day', "{a}don't", '{E4}I {E7}said', '{C}mmm...', '{C}Bär',
   ]
   it('renders each notation', () => {
     expect(Object.fromEntries(cases.map(c => [c, line(c)]))).toMatchInlineSnapshot(`
@@ -34,16 +34,21 @@ describe('chords', () => {
         "{C7+}a": "<span class="mb-ca"><span class="mb-chord">C<sup>maj7</sup></span>a</span>",
         "{C} a": "<span class="mb-ca"><span class="mb-chord">C</span>&nbsp;&nbsp;&nbsp;</span>a",
         "{C}.": "<span class="mb-chord-inline">C</span>",
-        "{C}_a_": "<span class="mb-ca"><span class="mb-chord">C</span></span><em>a</em>",
+        "{C}Bär": "<span class="mb-ca"><span class="mb-chord">C</span>Bär</span>",
+        "{C}_a_": "<span class="mb-ca"><span class="mb-chord">C</span>&#8203;</span><em>a</em>",
         "{C}a": "<span class="mb-ca"><span class="mb-chord">C</span>a</span>",
         "{C}a{G}b": "<span class="mb-ca"><span class="mb-chord">C</span>a</span><span class="mb-ca"><span class="mb-chord">G</span>b</span>",
+        "{C}mmm...": "<span class="mb-ca"><span class="mb-chord">C</span>mmm</span>...",
+        "{C}yester{G}day": "<span class="mb-ca"><span class="mb-chord">C</span>yester</span><span class="mb-ca"><span class="mb-chord">G</span>day</span>",
         "{D/F#}a": "<span class="mb-ca"><span class="mb-chord">D<sub>/F#</sub></span>a</span>",
         "{Ds4}a": "<span class="mb-ca"><span class="mb-chord">D<sup>sus4</sup></span>a</span>",
+        "{E4}I {E7}said": "<span class="mb-ca"><span class="mb-chord">E<sup>4</sup></span>I</span> <span class="mb-ca"><span class="mb-chord">E<sup>7</sup></span>said</span>",
         "{E7}a": "<span class="mb-ca"><span class="mb-chord">E<sup>7</sup></span>a</span>",
         "{F#}a": "<span class="mb-ca"><span class="mb-chord">F#</span>a</span>",
         "{Gm}a": "<span class="mb-ca"><span class="mb-chord">Gm</span>a</span>",
         "{a7}a": "<span class="mb-ca"><span class="mb-chord">a<sup>7</sup></span>a</span>",
         "{a}a": "<span class="mb-ca"><span class="mb-chord">a</span>a</span>",
+        "{a}don't": "<span class="mb-ca"><span class="mb-chord">a</span>don</span>'t",
         "{||:}a": "<span class="mb-ca"><span class="mb-chord">||:</span>a</span>",
       }
     `)
@@ -102,7 +107,7 @@ describe('structure', () => {
       "<ol>
       <li>one<br>
       two</li>
-      <li>three<ul class="mb-block"><li data-label="Ch" class="mb-has-chords"><span class="mb-ca"><span class="mb-chord">C</span>c</span>horus line</li></ul>
+      <li>three<ul class="mb-block"><li data-label="Ch" class="mb-has-chords"><span class="mb-ca"><span class="mb-chord">C</span>chorus</span> line</li></ul>
       </li>
       <li>four</li>
       </ol>

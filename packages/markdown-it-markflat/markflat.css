@@ -49,17 +49,18 @@
   list-style: none;
 }
 
-/* Chords sit above the character that follows them. */
-.mb .mb-has-chords {
-  line-height: 1.9em;
-}
+/* A chord and the syllables under it share one box, as wide as the wider of the two: chords
+   never overlap, and a long chord pushes the words apart. The box's baseline is its text's, so
+   the line's words stay aligned. */
 .mb-ca {
-  position: relative;
+  display: inline-block;
+  text-indent: 0;
 }
 .mb-chord {
-  position: absolute;
+  display: block;
   font-size: 0.9em;
-  bottom: 0.6em;
+  line-height: 1.15;
+  padding-right: 0.3em;
 }
 .mb-chord,
 .mb-chord-inline {

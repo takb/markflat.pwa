@@ -45,7 +45,7 @@ The chord functions are exported too: `transposeNote(note, by)`, `parseChord(tex
 | `# Title - Artist` | heading; the part after the first ` - ` is the artist (`<span class="mb-artist">`) |
 | `1.`, `2.` … | numbered verses (a Markdown ordered list) |
 | `~Label text…` | a block labelled by the word after `~`, e.g. `~Ch` for a chorus or `~Coda`. It runs until the next `~` line, numbered verse or blank line; inside a verse it belongs to that verse. A label alone (`~Instrumental`) is fine |
-| `{X}a` | chord `X` above the character that follows |
+| `{X}word` | chord `X` above the syllables that follow it, up to the end of the word or the next chord |
 | `{X}` at the end of a line, or before a space | above the line's end, or above a wide gap |
 | `{X}.` | chord `X` in the text, with no syllable under it |
 | `{...}`, `{\|:}`, `{:\|}`, `{'}` … | anything in braces that is not a chord is a mark, placed like a chord (`...` shows as …) |
@@ -65,7 +65,7 @@ flat scale, any other on the sharp scale, and minor roots stay lowercase.
 
 | Element | Class |
 |---|---|
-| chord above a character | `<span class="mb-ca"><span class="mb-chord">C</span>Y</span>` |
+| chord above its syllables | `<span class="mb-ca"><span class="mb-chord">C</span>Yesterday</span>` |
 | chord in the text | `<span class="mb-chord-inline">C</span>` |
 | extension, bass | `<sup>7</sup>`, `<sub>/F#</sub>` inside the chord |
 | labelled block | `<ul class="mb-block"><li data-label="Ch">…</li></ul>` |
