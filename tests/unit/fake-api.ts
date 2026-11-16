@@ -1,6 +1,8 @@
-// An in-memory songbook API with the real one's rules (ETags, If-Match, 412, rename),
+// An in-memory songbook API with the real one's rules (ETags, If-Match, 412, rename, titles
+// read from the heading),
 // installed as global fetch for the store tests.
 import { vi } from 'vitest'
+import { parseHeading } from '@/lib/song'
 
 export interface FakeApi {
   songs: Map<string, string>
@@ -19,7 +21,7 @@ export function installFakeApi(initial: Record<string, string> = {}, key = 'writ
   const error = (status: number, code: string) => json(status, { error: code, message: code })
   const song = (slug: string) => {
     const content = api.songs.get(slug) ?? ''
-    return { slug, title: slug, artist: '', etag: etagOf(content), content }
+    return { slug, ...parseHeading(content), etag: etagOf(content), content }
   }
   vi.stubGlobal('fetch', async (url: string, init: RequestInit = {}) => {
     const method = init.method ?? 'GET'

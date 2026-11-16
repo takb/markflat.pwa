@@ -5,6 +5,7 @@ import { fromServer, isChanged, merge, type Conflict, type LocalSong, type Merge
 import { parseHeading, slugFor } from '@/lib/song'
 import { storage } from '@/lib/storage'
 import { useSettings } from './settings'
+import { useSetlists } from './setlists'
 
 const STORAGE_KEY = 'markflat.songbook'
 const TEMPLATE = '# New song - Artist\n1. Verse  \n~Ch Chorus  \n'
@@ -56,6 +57,7 @@ export const useSongbook = defineStore('songbook', () => {
     const s = songs.value[from]
     delete songs.value[from]
     songs.value[to] = { ...s, slug: to }
+    useSetlists().followRename(from, to)
   }
 
   function accept(server: ServerSong, replacing?: string) {
