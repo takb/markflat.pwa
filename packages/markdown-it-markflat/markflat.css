@@ -98,14 +98,14 @@
 .mb-row {
   display: grid;
   grid-template-columns: 0.75em repeat(var(--cols), minmax(0, 1fr));
-  padding-top: 0.6em;
+  padding-top: 0.85em;
 }
 .mb-gutter {
   position: relative;
 }
 .mb-section {
   position: absolute;
-  top: -1.05em;
+  top: -1.3em;
   left: 0;
   padding: 0 0.2em;
   font-size: 0.5em;
@@ -185,6 +185,7 @@
   box-sizing: border-box;
   --thin: max(1.5px, 0.065em);
   --thick: max(4px, 0.17em);
+  --medium: max(2.5px, 0.1em);
 }
 .mb-bl-start {
   left: 0;
@@ -200,14 +201,14 @@
   border-left: var(--thin) solid currentColor;
   border-right: var(--thin) solid currentColor;
 }
-/* a double bar at a row's start or end: its outer line thick */
+/* a double bar at a row's start or end: its outer line a little thicker */
 .mb-bl-start.mb-bl-edge[data-bl='||'] {
-  width: max(8px, 0.26em);
-  border-left-width: var(--thick);
+  width: max(9px, 0.3em);
+  border-left-width: var(--medium);
 }
 .mb-bl-end.mb-bl-edge[data-bl='||'] {
-  width: max(8px, 0.26em);
-  border-right-width: var(--thick);
+  width: max(9px, 0.3em);
+  border-right-width: var(--medium);
 }
 .mb-bl[data-bl='|.'],
 .mb-bl[data-bl=':|'] {

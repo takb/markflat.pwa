@@ -98,9 +98,13 @@ const SIGN: Record<string, string> = {
   coda: '<svg class="mb-sign-svg" viewBox="0 0 20 24" aria-hidden="true"><ellipse cx="10" cy="12" rx="5.5" ry="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 1v22M1 12h18" stroke="currentColor" stroke-width="1.6"/></svg>',
   segno: '<svg class="mb-sign-svg" viewBox="0 0 20 24" aria-hidden="true"><path d="M14 6.5c0-2-2-3.5-4.2-3.5S5.5 4.4 5.5 6.6c0 4.6 9 5 9 10.2 0 2.4-2 4.2-4.6 4.2S5.8 19.4 5.8 17.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21 17 3" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="14" r="1.5" fill="currentColor"/></svg>',
 }
-const REPEAT = (n: number) => '<svg class="mb-repeat-svg" viewBox="0 0 ' + (10 + 8 * n) + ' 20" aria-hidden="true">'
-  + Array.from({ length: n }, (_, i) => '<path d="M' + (3 + 8 * i) + ' 17 ' + (11 + 8 * i) + ' 3" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>').join('')
-  + '<circle cx="3.5" cy="5" r="2" fill="currentColor"/><circle cx="' + (6.5 + 8 * n) + '" cy="15" r="2" fill="currentColor"/></svg>'
+// the repeat sign: a slash (two for %%) between two dots, point-symmetric about its centre
+const REPEAT = (n: number) => {
+  const w = 20 + 8 * (n - 1)
+  return '<svg class="mb-repeat-svg" viewBox="0 0 ' + w + ' 20" aria-hidden="true">'
+    + Array.from({ length: n }, (_, i) => '<path d="M' + (4 + 8 * i) + ' 18 ' + (16 + 8 * i) + ' 2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>').join('')
+    + '<circle cx="5" cy="6" r="2.3" fill="currentColor"/><circle cx="' + (w - 5) + '" cy="14" r="2.3" fill="currentColor"/></svg>'
+}
 
 const CLOSING = new Set<BarLine | null>([':|', '||', '|.'])
 
