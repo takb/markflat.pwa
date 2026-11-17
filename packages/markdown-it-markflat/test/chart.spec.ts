@@ -68,6 +68,12 @@ describe('charts', () => {
     expect(html).toContain('<span class="mb-mark mb-at-start">fine</span>')
     expect(html).toContain('mb-sign mb-at-end" title="segno"')
   })
+  it('keep a sign at a row\'s very start right of the bar line (clear of the section label)', () => {
+    const html = md.render('~B\n{|| {segno} f7 | Bb7 {segno} | {coda} e7 |')
+    expect(html).toContain('mb-sign mb-at-start mb-at-row-start" title="segno"')
+    expect(html).toContain('mb-sign mb-at-end" title="segno"')
+    expect(html).toContain('mb-sign mb-at-start" title="coda"')
+  })
   it('draw :||: in halves: repeat end on the bar before, the rest on the bar after', () => {
     const html = md.render('{|: C | G :||: a | F :|')
     const bars = html.split('<div class="mb-bar').slice(1)

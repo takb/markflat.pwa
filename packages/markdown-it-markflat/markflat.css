@@ -265,6 +265,10 @@
   left: 0;
   transform: translateX(-50%);
 }
+.mb-sign.mb-at-row-start {
+  left: 0.25em;
+  transform: none;
+}
 .mb-sign.mb-at-end {
   right: 0;
   transform: translateX(50%);
