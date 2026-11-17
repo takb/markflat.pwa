@@ -18,7 +18,7 @@ export const useRemote = defineStore('remote', () => {
   let busy = false
 
   const changes = computed<RemoteChanges>(() => {
-    if (!server.value) return { changed: [], added: [], removed: [] }
+    if (!server.value || stale.value) return { changed: [], added: [], removed: [] }
     const c = compareVersions(songbook.songs, server.value)
     // a song changed on both sides is in the conflict dialog already
     const conflicted = new Set(songbook.conflicts.map(x => x.slug))
@@ -41,21 +41,45 @@ export const useRemote = defineStore('remote', () => {
     ].filter(Boolean).join(' · ')
   })
 
+  // Uploads from here change both sides: a check that overlaps one could see the server before
+  // and this device after it (or the other way round) and take the device's own save for a
+  // change made elsewhere. So a check waits while one is under way, an answer that overlapped
+  // one is dropped, and every upload is followed by a fresh check.
+  let writes = 0
+  /** an upload changed things since the last answer: the list is not to be trusted until a new one */
+  const stale = ref(false)
+  watch(() => songbook.busy, (now, before) => {
+    if (now > before) {
+      writes++
+      stale.value = true
+    } else if (now === 0) check()
+  })
+
   /** Asks the server, quietly: offline, a refused key or anything else just waits for the next check. */
   async function check() {
-    if (busy || !settings.key || !Object.keys(songbook.songs).length) return
+    if (busy || songbook.busy || !settings.key || !Object.keys(songbook.songs).length) return
     busy = true
+    const started = writes
+    let dropped = false
     try {
-      const r = await settings.api.versions(listEtag)
-      if (r) {
-        server.value = r.versions
-        listEtag = r.etag
+      // after an upload the list has changed: ask for all of it, not "unchanged since"
+      const r = await settings.api.versions(stale.value ? null : listEtag)
+      if (writes !== started || songbook.busy) {
+        dropped = true
+      } else {
+        if (r) {
+          server.value = r.versions
+          listEtag = r.etag
+        }
+        stale.value = false
       }
     } catch {
       // next time
     } finally {
       busy = false
     }
+    // an answer from before an upload: ask again, now that it is done
+    if (dropped && !songbook.busy) check()
   }
 
   const dismiss = () => { dismissed.value = signature.value }

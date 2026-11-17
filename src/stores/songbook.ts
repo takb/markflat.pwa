@@ -60,6 +60,17 @@ export const useSongbook = defineStore('songbook', () => {
     useSetlists().followRename(from, to)
   }
 
+  /** Server calls that change songs here, under way (the remote check waits for them). */
+  const busy = ref(0)
+  async function writing<T>(work: () => Promise<T>): Promise<T> {
+    busy.value++
+    try {
+      return await work()
+    } finally {
+      busy.value--
+    }
+  }
+
   function accept(server: ServerSong, replacing?: string) {
     if (replacing && replacing !== server.slug) delete songs.value[replacing]
     songs.value[server.slug] = fromServer(server)
@@ -67,10 +78,12 @@ export const useSongbook = defineStore('songbook', () => {
 
   /** Downloads the server's songbook and merges it in (nothing changed here is lost). */
   async function sync(): Promise<MergeResult> {
-    const result = merge(songs.value, await useSettings().api.songs())
-    songs.value = result.songs
-    for (const c of result.conflicts) addConflict(c)
-    return result
+    return writing(async () => {
+      const result = merge(songs.value, await useSettings().api.songs())
+      songs.value = result.songs
+      for (const c of result.conflicts) addConflict(c)
+      return result
+    })
   }
 
   function addConflict(c: Conflict) {
@@ -81,7 +94,8 @@ export const useSongbook = defineStore('songbook', () => {
    * Uploads a song. A changed title renames it on the server (B6); a new song gets its name
    * from its title. If someone else changed it meanwhile, both versions go to `conflicts`.
    */
-  async function save(slug: string): Promise<SaveResult> {
+  const save = (slug: string): Promise<SaveResult> => writing(() => saveNow(slug))
+  async function saveNow(slug: string): Promise<SaveResult> {
     const settings = useSettings()
     const api = settings.api
     let s = songs.value[slug]
@@ -135,7 +149,8 @@ export const useSongbook = defineStore('songbook', () => {
   }
 
   /** Deletes a song here and on the server (the server keeps it as a revision). */
-  async function remove(slug: string): Promise<void> {
+  const remove = (slug: string): Promise<void> => writing(() => removeNow(slug))
+  async function removeNow(slug: string): Promise<void> {
     const s = songs.value[slug]
     if (!s) return
     if (s.etag !== null) {
@@ -156,7 +171,8 @@ export const useSongbook = defineStore('songbook', () => {
   }
 
   /** Settles a conflict: keep this device's version (uploaded over the server's) or take the server's. */
-  async function resolve(slug: string, keep: 'mine' | 'theirs'): Promise<void> {
+  const resolve = (slug: string, keep: 'mine' | 'theirs'): Promise<void> => writing(() => resolveNow(slug, keep))
+  async function resolveNow(slug: string, keep: 'mine' | 'theirs'): Promise<void> {
     const c = conflicts.value.find(x => x.slug === slug)
     if (!c) return
     if (keep === 'theirs') {
@@ -172,7 +188,8 @@ export const useSongbook = defineStore('songbook', () => {
    * Makes an old version current on the server (D6), also for a deleted song. This device's
    * copy is replaced by it; a stale copy gets the server's version and an error instead.
    */
-  async function restore(slug: string, id: string): Promise<void> {
+  const restore = (slug: string, id: string): Promise<void> => writing(() => restoreNow(slug, id))
+  async function restoreNow(slug: string, id: string): Promise<void> {
     const etag = songs.value[slug]?.etag ?? null
     try {
       accept(await useSettings().api.restore(slug, id, etag))
@@ -195,7 +212,7 @@ export const useSongbook = defineStore('songbook', () => {
     }
   }
 
-  return { songs, conflicts, list, pending, changed, create, setContent, reset, sync, save, uploadPending, remove, resolve, restore }
+  return { songs, conflicts, busy, list, pending, changed, create, setContent, reset, sync, save, uploadPending, remove, resolve, restore }
 })
 
 /** The songbook from localStorage; the old app's format is taken over once. */

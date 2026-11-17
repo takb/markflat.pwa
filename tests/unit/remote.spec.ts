@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { watch } from 'vue'
 import { compareVersions } from '@/lib/remote'
 import { useRemote } from '@/stores/remote'
 import { useSettings } from '@/stores/settings'
@@ -78,6 +79,34 @@ describe('remote store', () => {
     api.songs.set('yesterday', '# Yesterday - The Beatles\n1. v3')
     await remote.check()
     expect(remote.visible).toBe(true)
+  })
+
+  it('does not mistake its own save for a change elsewhere when a check overlaps it', async () => {
+    const { songbook, remote } = await setup()
+    await remote.check() // the server's list as it was
+    songbook.setContent('yesterday', '# Yesterday - The Beatles\n1. mine')
+    // the save starts first and ends before the check's answer (made with the old list) arrives
+    const saving = songbook.save('yesterday')
+    const seen: boolean[] = []
+    const stop = watch(() => remote.visible, v => seen.push(v), { flush: 'sync' })
+    await saving
+    expect(remote.visible).toBe(false) // never with the old list against the new save
+    await new Promise(r => setTimeout(r, 0))
+    expect(remote.count).toBe(0)
+    expect(seen).not.toContain(true)
+    stop()
+  })
+
+  it('does not show a song renamed by its own save as new and deleted', async () => {
+    const { songbook, remote } = await setup()
+    await remote.check()
+    songbook.setContent('yesterday', '# Yesterday Once More - The Beatles')
+    const saving = songbook.save('yesterday')
+    await remote.check() // while the rename is on its way
+    expect(remote.visible).toBe(false)
+    await saving
+    await new Promise(r => setTimeout(r, 0))
+    expect(remote.count).toBe(0)
   })
 
   it('stays quiet offline', async () => {
