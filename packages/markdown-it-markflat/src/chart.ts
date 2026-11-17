@@ -103,8 +103,9 @@ const escapeHtml = (s: string) =>
 
 const SIGN: Record<string, string> = {
   coda: '<svg class="mb-sign-svg" viewBox="0 0 20 24" aria-hidden="true"><ellipse cx="10" cy="12" rx="5.5" ry="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 1v22M1 12h18" stroke="currentColor" stroke-width="1.6"/></svg>',
-  // an S with ball ends, a slash through it and two dots, each a part of its own
-  segno: '<svg class="mb-sign-svg" viewBox="-2 -3 97 125" aria-hidden="true"><path d="M37 18C37 4 24 0 15 4S2 22 12 31 40 48 55 58 91 80 88 100 72 119 63 113 55 102 57 99" fill="none" stroke="currentColor" stroke-width="10.5" stroke-linecap="round"/><circle cx="37" cy="18" r="8.5" fill="currentColor"/><circle cx="57" cy="100" r="8.5" fill="currentColor"/><path d="M10 114 85 7" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="9" cy="67" r="8" fill="currentColor"/><circle cx="86" cy="50" r="8" fill="currentColor"/></svg>',
+  // an S of two equal circular curls joined by a straight stroke (point-symmetric, constant width,
+  // round ends), a slash through it and two dots, all separate
+  segno: '<svg class="mb-sign-svg" viewBox="-3 -3 102 126" aria-hidden="true"><path d="M45.7 29.5A20 20 0 1 0 16.8 43.7L79.2 76.3A20 20 0 1 1 50.3 90.5" fill="none" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><path d="M14 112 82 8" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><circle cx="88" cy="44" r="8" fill="currentColor"/><circle cx="8" cy="76" r="8" fill="currentColor"/></svg>',
 }
 // the repeat sign: a slash (two for %%) between two dots, point-symmetric about its centre
 const REPEAT = (n: number) => {
