@@ -74,3 +74,217 @@
   font-style: normal;
   text-decoration: underline;
 }
+
+/* The heading's remark ("(Bossa Nova)", a capo reminder): small, under the artist. */
+.mb-remark {
+  display: block;
+  font-size: 0.75em;
+  font-weight: normal;
+  text-align: right;
+  color: var(--mb-muted, #777);
+}
+
+/* Chord charts: all rows of a chart on one grid of equal bars, the full width. A narrow gutter on
+   the left holds the section label (inverted, above the row's first bar line) and the time
+   signature. Chords and bar lines in the text colour, marks in --mb-mark. The app may shrink a
+   chart's font size so its widest bar fits. */
+.mb-chart {
+  clear: both; /* the artist floats right in the heading */
+  font-size: 1.6em;
+  line-height: 1.2;
+  margin: 0.3em 0 0.6em;
+  width: 100%;
+}
+.mb-row {
+  display: grid;
+  grid-template-columns: 0.75em repeat(var(--cols), minmax(0, 1fr));
+  padding-top: 0.6em;
+}
+.mb-gutter {
+  position: relative;
+}
+.mb-section {
+  position: absolute;
+  top: -1.05em;
+  left: 0;
+  padding: 0 0.2em;
+  font-size: 0.5em;
+  font-weight: bold;
+  line-height: 1.25;
+  background: var(--mb-inverse-bg, #000);
+  color: var(--mb-inverse-fg, #fff);
+}
+.mb-time {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.55em;
+  font-weight: bold;
+  line-height: 0.95;
+}
+.mb-gutter .mb-time {
+  position: absolute;
+  top: 55%;
+  right: 0.25em;
+  transform: translateY(-50%);
+}
+.mb-time-in-bar {
+  margin-right: 0.3em;
+}
+.mb-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 1.5em;
+  padding: 0.1em 0.2em 0.1em 0.3em;
+}
+.mb-chords {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  align-items: baseline;
+  width: 100%;
+}
+.mb-chords:has(.mb-time-in-bar) {
+  grid-template-columns: auto repeat(calc(var(--n) - 1), minmax(0, 1fr));
+}
+.mb-cc {
+  min-width: 0;
+  padding-right: 0.15em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+.mb-cc sup,
+.mb-cc sub {
+  font-size: 0.55em;
+}
+.mb-cc sub {
+  vertical-align: baseline;
+}
+.mb-nc {
+  font-size: 0.6em;
+}
+.mb-repeat {
+  justify-self: center;
+  line-height: 0;
+}
+.mb-repeat-svg {
+  height: 0.75em;
+  width: auto;
+}
+/* a two-bar repeat sits on the bar line between the two bars */
+.mb-repeat-2 {
+  justify-self: end;
+  transform: translateX(calc(50% + 0.2em));
+}
+
+/* Bar lines: | thin, || two thin, |. thin and thick, |: and :| thick, thin and two dots. */
+.mb-bl {
+  position: absolute;
+  top: 0.15em;
+  bottom: 0.15em;
+  box-sizing: border-box;
+  --thin: max(1px, 0.05em);
+  --thick: max(3px, 0.14em);
+}
+.mb-bl-start {
+  left: 0;
+}
+.mb-bl-end {
+  right: 0;
+}
+.mb-bl[data-bl='|'] {
+  border-left: var(--thin) solid currentColor;
+}
+.mb-bl[data-bl='||'] {
+  width: max(5px, 0.16em);
+  border-left: var(--thin) solid currentColor;
+  border-right: var(--thin) solid currentColor;
+}
+.mb-bl[data-bl='|.'],
+.mb-bl[data-bl=':|'] {
+  width: max(7px, 0.22em);
+  border-left: var(--thin) solid currentColor;
+  border-right: var(--thick) solid currentColor;
+}
+.mb-bl[data-bl='|:'] {
+  width: max(7px, 0.22em);
+  border-left: var(--thick) solid currentColor;
+  border-right: var(--thin) solid currentColor;
+}
+.mb-bl[data-bl='|:']::after,
+.mb-bl[data-bl=':|']::after {
+  content: '';
+  position: absolute;
+  top: calc(50% - 0.25em);
+  width: 0.12em;
+  height: 0.12em;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0.38em currentColor;
+}
+.mb-bl[data-bl='|:']::after {
+  left: 0.3em;
+}
+.mb-bl[data-bl=':|']::after {
+  right: 0.3em;
+}
+
+/* Marks: coda and segno above the bar line they stand next to, other marks as small text. */
+.mb-sign,
+.mb-mark {
+  position: absolute;
+  top: -0.75em;
+  color: var(--mb-mark, currentColor);
+  line-height: 1;
+}
+.mb-sign {
+  width: 0.65em;
+}
+.mb-sign-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mb-sign.mb-at-start {
+  left: 0;
+  transform: translateX(-50%);
+}
+.mb-sign.mb-at-end {
+  right: 0;
+  transform: translateX(50%);
+}
+.mb-mark {
+  font-size: 0.5em;
+  font-style: italic;
+  white-space: nowrap;
+  top: -0.9em;
+}
+.mb-mark.mb-at-start {
+  left: 0.7em;
+}
+.mb-mark.mb-at-end {
+  right: 0.7em;
+}
+
+/* Endings (1. 2.): a bracket over their bars, the number at its start. */
+.mb-in-ending::before {
+  content: '';
+  position: absolute;
+  top: -0.3em;
+  left: 0;
+  right: 0;
+  border-top: max(1px, 0.05em) solid var(--mb-mark, currentColor);
+}
+.mb-in-ending[data-ending]::before {
+  height: 0.35em;
+  border-left: max(1px, 0.05em) solid var(--mb-mark, currentColor);
+}
+.mb-in-ending[data-ending]::after {
+  content: attr(data-ending);
+  position: absolute;
+  top: -0.32em;
+  left: 0.2em;
+  font-size: 0.4em;
+  font-weight: bold;
+  color: var(--mb-mark, currentColor);
+}

@@ -76,6 +76,43 @@ The key functions are exported for apps: `frontMatter`, `withoutFrontMatter`, `w
 (adds `key:` unless there is one), `parseKey`, `keyName`, `detectKey`, `songKey` (the field, or
 the chords), `transposeKey`.
 
+## Chord charts
+
+```
+~A {4/4}
+{|| a6 | %   | Ab07    | %     |
+{|  g7 | C7  | F07 F7+ | F7+   ||
+~B
+{|| f7 | Bb7 | e7      | A7b13 |
+{|  d7 | G7 {coda} ||  | {coda} C6 ||
+```
+
+| Syntax | Meaning |
+|---|---|
+| `{\|` at the start of a line | a chart row (also `{\|\|`, `{\|:`, `{\|.`, `{:\|`); a line starting with a closed mark such as `{\|:}` stays lyrics |
+| `\|` `\|\|` `\|.` `\|:` `:\|` | bar lines: single, double, final, repeat start, repeat end |
+| chords between bar lines | without braces; several in a bar share it equally |
+| `%`, `%%` | repeat the previous bar; the previous two bars (`%%` in the first of the two bars, the second left empty) |
+| `-` or nothing | an empty bar |
+| `N.C.` | no chord |
+| `~A` on its own line before a row | a section label (any word), inverted, above the row's start |
+| `~A {4/4}`, or `{4/4}` at a row's start | the time signature before the first bar; `{3/4}` inside a bar is a time change there |
+| `{coda}`, `{segno}` | the sign above the bar line it stands next to (first in a bar: the bar line before; after a chord: the one after) |
+| `{1.}`, `{2.}` | an ending: a bracket from that bar to the next closing bar line (`:\|` `\|\|` `\|.`) or the row's end |
+| `{fine}`, `{D.C.}`, `{D.S. al coda}`, `{x3}` … | any other mark: small text above the bar |
+
+All rows of a chart (up to a blank line or a line that is no row or label) share one grid with
+as many equal bars as its longest row; shorter rows leave the rest empty. Chart chords are 1.6 ×
+the lyric size; an app may shrink a chart so its widest bar fits (`markflat.css` does not).
+Chart chords count for the song's key and transpose like any other. `alignCharts(src)` pads
+every chart's bars so their bar lines line up in the source.
+
+**Chord display.** `md.render(src, { jazz: true })` writes chords with jazz symbols: `a` → A–,
+`C7+` → CΔ7, `C0` → C°, `a7b5` → Aø7, `C+` → C+ (in charts and lyrics); `detailed: true` spells
+them out (Am, Cmaj7, Cdim). **The heading:** a `(…)` at the very end of `# Title - Artist (…)`
+becomes a remark line under the artist (`<span class="mb-remark">`), e.g. a style or a capo
+reminder; it is never a transposition.
+
 ## Output
 
 | Element | Class |
@@ -84,9 +121,13 @@ the chords), `transposeKey`.
 | chord in the text | `<span class="mb-chord-inline">C</span>` |
 | extension, bass | `<sup>7</sup>`, `<sub>/F#</sub>` inside the chord |
 | labelled block | `<ul class="mb-block"><li data-label="Ch">…</li></ul>` |
+| chart | `<div class="mb-chart" style="--cols:4">`, rows `.mb-row` (a `.mb-gutter` with `.mb-section` and `.mb-time`), bars `.mb-bar` with bar lines `.mb-bl[data-bl]`, chords `.mb-cc`, `.mb-repeat`, `.mb-sign`, `.mb-mark`, endings `.mb-in-ending[data-ending]` |
+| heading remark | `<span class="mb-remark">` inside `.mb-artist` |
 | a list item, block or paragraph with chords above its lines | gets the class `mb-has-chords` (more line height) |
 
-`markflat.css` styles all of this inside an element with the class `mb`.
+`markflat.css` styles all of this inside an element with the class `mb`. Charts take their colours
+from `--mb-mark` (marks), `--mb-inverse-bg`/`--mb-inverse-fg` (section labels) and `--mb-muted`
+(the remark), with black and white defaults.
 
 ## Licence
 

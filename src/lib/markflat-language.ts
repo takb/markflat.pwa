@@ -3,7 +3,7 @@ import { Tag, tags } from '@lezer/highlight'
 
 /** *italic*, apart from _emphasis_ (underlined) */
 const italic = Tag.define()
-import { parseChord } from 'markdown-it-markflat'
+import { isChartRow, parseChord } from 'markdown-it-markflat'
 
 // markflat highlighting for the editor (B13): the heading, verse numbers, ~labels, chords
 // (a brace that is no chord is a mark and looks quieter, so a chord typo stands out), wide
@@ -14,11 +14,13 @@ interface State {
   lineStart: boolean
   /** the front matter: may start (first line), inside it, or past it */
   front: 'start' | 'in' | 'done'
+  /** the line is a chord chart row: its words are chords, without braces */
+  chartRow: boolean
 }
 
 export const markflatLanguage = StreamLanguage.define<State>({
   name: 'markflat',
-  startState: () => ({ lineStart: true, front: 'start' }),
+  startState: () => ({ lineStart: true, front: 'start', chartRow: false }),
   copyState: s => ({ ...s }),
   blankLine(state: State) {
     if (state.front === 'start') state.front = 'done'
@@ -36,7 +38,11 @@ export const markflatLanguage = StreamLanguage.define<State>({
       stream.skipToEnd()
       return 'comment'
     }
-    if (stream.sol()) state.lineStart = true
+    if (stream.sol()) {
+      state.lineStart = true
+      state.chartRow = isChartRow(stream.string)
+    }
+    if (state.chartRow) return chartToken(stream)
     if (state.lineStart) {
       if (stream.eatSpace()) return null
       state.lineStart = false
@@ -48,7 +54,7 @@ export const markflatLanguage = StreamLanguage.define<State>({
       if (stream.match(/^~\S*/)) return 'labelName'
     }
     const brace = stream.match(/^\{([^}\n]*)\}/) as RegExpMatchArray | null
-    if (brace) return parseChord(brace[1]) ? 'keyword' : 'meta'
+    if (brace) return /^\d+\/\d+$/.test(brace[1]) ? 'number' : parseChord(brace[1]) ? 'keyword' : 'meta'
     if (stream.match('==')) return 'operator'
     if (stream.match(/^_[^_\n]+_/)) return 'emphasis'
     if (stream.match(/^\*\*[^*\n]+\*\*/)) return 'strong'
@@ -59,6 +65,19 @@ export const markflatLanguage = StreamLanguage.define<State>({
   },
   tokenTable: { labelName: tags.labelName, italic },
 })
+
+// A chart row: bar lines and marks quiet, chords as chords (a word that is no chord stays quiet,
+// so a typo stands out), a time signature as a number.
+function chartToken(stream: StringStream): string | null {
+  if (stream.eatSpace()) return null
+  if (stream.match(/^\{(?=\||:\|)/) || stream.match(/^(:\||\|\||\|\.|\|:|\|)/)) return 'meta'
+  const brace = stream.match(/^\{([^}\n]*)\}?/) as RegExpMatchArray | null
+  if (brace) return /^\d+\/\d+$/.test(brace[1]) ? 'number' : 'meta'
+  const word = stream.match(/^[^\s|{]+/) as RegExpMatchArray | null
+  if (word) return parseChord(word[0]) && !/^(%+|-|N\.C\.)$/.test(word[0]) ? 'keyword' : 'meta'
+  stream.next()
+  return null
+}
 
 export const markflatHighlight = HighlightStyle.define([
   { tag: tags.heading, fontWeight: '700', color: 'var(--text)' },

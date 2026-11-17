@@ -11,7 +11,7 @@ import { markflatHighlight, markflatLanguage } from '@/lib/markflat-language'
 // (Ctrl+F), line wrapping. The font size follows the app's zoom.
 const model = defineModel<string>({ required: true })
 defineProps<{ fontSize: number }>()
-const emit = defineEmits<{ save: [] }>()
+const emit = defineEmits<{ save: [], align: [] }>()
 const host = ref<HTMLElement>()
 let view: EditorView | undefined
 
@@ -48,7 +48,11 @@ onMounted(() => {
         markflatLanguage,
         syntaxHighlighting(markflatHighlight),
         theme,
-        keymap.of([{ key: 'Mod-s', preventDefault: true, run: () => { emit('save'); return true } }, ...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+        keymap.of([
+          { key: 'Mod-s', preventDefault: true, run: () => { emit('save'); return true } },
+          { key: 'Mod-Shift-a', preventDefault: true, run: () => { emit('align'); return true } },
+          ...defaultKeymap, ...historyKeymap, ...searchKeymap,
+        ]),
         EditorView.contentAttributes.of({ 'aria-label': 'Song text', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
         EditorView.updateListener.of(u => {
           if (u.docChanged) model.value = u.state.doc.toString()

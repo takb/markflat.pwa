@@ -11,6 +11,8 @@ export const clampZoom = (z: number) => Math.round(Math.min(MAX_ZOOM, Math.max(M
 
 // The key (one field: a write key also reads), who it belongs to, and this device's
 // preferences: zoom (the song's font size), colours, the list's order, the chord display.
+export type ChordStyle = 'plain' | 'detailed' | 'jazz'
+
 export const useSettings = defineStore('settings', () => {
   const key = ref(storage.get('markflat.key') ?? '')
   // who the key belongs to, remembered so the app knows offline too
@@ -19,13 +21,15 @@ export const useSettings = defineStore('settings', () => {
   const theme = ref<Theme>(pick(storage.get('markflat.theme'), ['system', 'light', 'dark'], 'system'))
   const sortBy = ref<'title' | 'artist'>(pick(storage.get('markflat.sort'), ['title', 'artist'], 'title'))
   const unicode = ref(storage.get('markflat.unicode') !== '0')
-  const detailed = ref(storage.get('markflat.detailed') === '1')
+  // how chords are written: as in the song (a, C7+), spelled out (Am, Cmaj7) or jazz (A–, CΔ7);
+  // "detailed" was a switch of its own until chord charts came
+  const chords = ref<ChordStyle>(pick(storage.get('markflat.chords'), ['plain', 'detailed', 'jazz'], storage.get('markflat.detailed') === '1' ? 'detailed' : 'plain'))
   const api = createApi(() => key.value)
 
   watch(zoom, z => storage.set('markflat.zoom', String(z)))
   watch(sortBy, s => storage.set('markflat.sort', s))
   watch(unicode, u => storage.set('markflat.unicode', u ? '1' : '0'))
-  watch(detailed, d => storage.set('markflat.detailed', d ? '1' : '0'))
+  watch(chords, c => storage.set('markflat.chords', c))
   watchEffect(() => {
     storage.set('markflat.theme', theme.value)
     if (theme.value === 'system') document.documentElement.removeAttribute('data-theme')
@@ -51,7 +55,7 @@ export const useSettings = defineStore('settings', () => {
 
   const setZoom = (z: number) => { zoom.value = clampZoom(z) }
 
-  return { key, me, zoom, theme, sortBy, unicode, detailed, api, setKey, checkKey, setZoom }
+  return { key, me, zoom, theme, sortBy, unicode, chords, api, setKey, checkKey, setZoom }
 })
 
 function readMe(): Me | null {

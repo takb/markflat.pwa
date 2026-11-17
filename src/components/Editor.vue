@@ -2,8 +2,8 @@
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle, TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
-import { ArrowLeft, History, RotateCcw, Save, Trash2 } from '@lucide/vue'
-import { detectKey, frontMatter, parseKey, withKeyField } from 'markdown-it-markflat'
+import { ArrowLeft, Columns3, History, RotateCcw, Save, Trash2 } from '@lucide/vue'
+import { alignCharts, detectKey, frontMatter, isChartRow, parseKey, withKeyField } from 'markdown-it-markflat'
 import { ApiError } from '@/api/client'
 import { useRemote } from '@/stores/remote'
 import { useSettings } from '@/stores/settings'
@@ -37,6 +37,13 @@ const content = computed({
 })
 
 const reset = () => { if (ui.selected) songbook.reset(ui.selected) }
+
+// Chord charts: "Align bars" pads every chart's rows so their bar lines line up (undoable).
+const hasChart = computed(() => content.value.split('\n').some(isChartRow))
+function align() {
+  const aligned = alignCharts(content.value)
+  if (aligned !== content.value) content.value = aligned
+}
 
 // The song's key goes into its front matter on save, worked out from the chords, unless it is
 // there already: then it is the writer's, and only checked.
@@ -100,6 +107,7 @@ async function deleteSong() {
         <span v-if="remote.isChanged(ui.selected)" class="text-sm font-normal text-accent" data-testid="changed-elsewhere"> · changed on the server</span>
       </h1>
       <button type="button" class="btn btn-ghost btn-icon" aria-label="Undo all changes" title="Undo all changes" :disabled="!changed || isNew" @click="reset"><RotateCcw :size="18" /></button>
+      <button v-if="hasChart" type="button" class="btn btn-ghost btn-icon" aria-label="Align bars" title="Align bars (Ctrl+Shift+A)" @click="align"><Columns3 :size="18" /></button>
       <button v-if="!isNew" type="button" class="btn btn-ghost btn-icon" aria-label="History" title="History" @click="ui.selected && ui.history(ui.selected)"><History :size="18" /></button>
       <button type="button" class="btn btn-ghost btn-icon" aria-label="Delete" title="Delete" @click="confirmDelete = true"><Trash2 :size="18" /></button>
       <button type="button" class="btn btn-primary" aria-label="Save" @click="save"><Save :size="16" /><span class="hidden sm:inline">Save</span></button>
@@ -107,7 +115,7 @@ async function deleteSong() {
 
     <SplitterGroup v-if="wide" direction="horizontal" class="min-h-0 flex-1" auto-save-id="markflat-editor">
       <SplitterPanel :default-size="50" :min-size="25" class="min-h-0">
-        <CodeEditor v-model="content" :font-size="settings.zoom" @save="save" />
+        <CodeEditor v-model="content" :font-size="settings.zoom" @save="save" @align="align" />
       </SplitterPanel>
       <SplitterResizeHandle class="w-1.5 bg-surface transition-colors hover:bg-accent/40 data-[state=drag]:bg-accent/60" />
       <SplitterPanel :default-size="50" :min-size="25" class="min-h-0 overflow-y-auto px-3 py-3">
@@ -121,7 +129,7 @@ async function deleteSong() {
         <TabsTrigger value="preview" class="tab">Preview</TabsTrigger>
       </TabsList>
       <TabsContent value="text" class="min-h-0 flex-1" :force-mount="true" :hidden="tab !== 'text'">
-        <CodeEditor v-model="content" :font-size="settings.zoom" @save="save" />
+        <CodeEditor v-model="content" :font-size="settings.zoom" @save="save" @align="align" />
       </TabsContent>
       <TabsContent value="preview" class="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         <SongSheet :content="content" />

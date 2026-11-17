@@ -336,3 +336,25 @@ test('a song changed elsewhere is noticed and synced', async ({ page }) => {
     writeFileSync(DATA + '/yesterday.mb', before)
   }
 })
+
+test('a chord chart: typed, aligned, shown as bars in jazz symbols', async ({ page }) => {
+  await open(page, 'e2e-writer')
+  await page.getByRole('button', { name: 'New song' }).click()
+  await page.locator('.cm-content').click()
+  await page.keyboard.press('Control+a')
+  await page.keyboard.type('# Chart Test - Tester (Bossa Nova)\n~A {4/4}\n{|| a6 | % | Ab07 | % |\n{| g7 | C7 | F07 F7+ | F7+ ||\n')
+  await page.getByRole('button', { name: 'Align bars' }).click()
+  await expect(page.locator('.cm-content')).toContainText('{|| a6 | %  | Ab07    | %   |')
+  await page.keyboard.press('Control+z')
+  await expect(page.locator('.cm-content')).toContainText('{|| a6 | % | Ab07 | % |')
+  await page.keyboard.press('Control+Shift+a')
+  await expect(page.locator('.cm-content')).toContainText('{|| a6 | %  | Ab07    | %   |')
+
+  // the preview (side by side on a wide screen): one grid of 4 bars, the remark under the artist
+  const preview = page.locator('.mb').last()
+  await expect(preview.locator('.mb-row')).toHaveCount(2)
+  await expect(preview.locator('.mb-row').first().locator('.mb-bar')).toHaveCount(4)
+  await expect(preview.locator('.mb-remark')).toHaveText('(Bossa Nova)')
+  await expect(preview.locator('.mb-section')).toHaveText('A')
+  await expect(preview.locator('.mb-cc').first()).toHaveText('a6')
+})

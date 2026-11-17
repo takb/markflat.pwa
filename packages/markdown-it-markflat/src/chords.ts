@@ -9,6 +9,8 @@ export interface ChordOptions {
   unicode?: boolean
   /** spell chords out: a → Am, C0 → Cdim, C+ → Caug */
   detailed?: boolean
+  /** jazz symbols: a → A–, C7+ → CΔ7, C0 → C°, a7b5 → Aø7 (wins over `detailed`) */
+  jazz?: boolean
   /**
    * the song's key (`G`, `Em`): transposed chords are spelled in the key they end up in. The
    * plugin sets it from the song (its `key:` field, or its chords); without it, a flat note
@@ -77,7 +79,18 @@ export function chordHtml(text: string, o: ChordOptions = {}): string {
   const target = by && o.key ? transposeKey(o.key, by) : null
   let root = transposeNote(chord.root, by, target)
   let quality = chord.quality
-  if (o.detailed && root) {
+  let extension = chord.extension
+  if (o.jazz && root) {
+    const minor = root[0] === root[0].toLowerCase() || quality.includes('m')
+    root = root[0].toUpperCase() + root.slice(1)
+    if (quality.startsWith('0')) quality = '°'
+    else if (quality.startsWith('+')) quality = '+'
+    else if (minor && /^7b5/.test(extension)) {
+      quality = 'ø'
+      extension = '7' + extension.slice(3)
+    } else quality = minor ? '–' : ''
+    extension = extension.replace(/(\d+)\+/g, 'Δ$1')
+  } else if (o.detailed && root) {
     const minor = root[0] === root[0].toLowerCase()
     root = root[0].toUpperCase() + root.slice(1)
     if (minor && quality === '') quality = 'm'
@@ -85,7 +98,7 @@ export function chordHtml(text: string, o: ChordOptions = {}): string {
   }
   // The root letter itself may be a lowercase b (B minor): only the accidental is converted.
   const rootHtml = root ? root[0] + accidentals(root.slice(1), o) : ''
-  const extension = chord.extension.replace(/(\d+)\+/g, 'maj$1').replace(/^.([24])$/, 'sus$1')
+  extension = extension.replace(/(\d+)\+/g, 'maj$1').replace(/^.([24])$/, 'sus$1')
   const bass = transposeNote(chord.bass, by, target)
   return escapeHtml(rootHtml + quality)
     + (extension ? '<sup>' + escapeHtml(accidentals(extension, o)) + '</sup>' : '')

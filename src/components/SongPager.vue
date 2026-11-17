@@ -161,8 +161,10 @@ useEventListener(document, 'gesturestart', e => e.preventDefault())
 const more = computed<MenuEntry[]>(() => [
   // songs changed elsewhere: here only a dot on ⋯ and this entry (RemoteNotice stays away while playing)
   { label: 'Sync (' + remote.count + ' changed)', icon: RefreshCw, hidden: !remote.count, action: () => { download() } },
-  { label: 'Detailed chords', checked: settings.detailed, separatorBefore: remote.count > 0, action: () => { settings.detailed = !settings.detailed } },
-  { label: 'Show ♯ and ♭', checked: settings.unicode, action: () => { settings.unicode = !settings.unicode } },
+  { label: 'Chords as written', checked: settings.chords === 'plain', separatorBefore: remote.count > 0, action: () => { settings.chords = 'plain' } },
+  { label: 'Detailed chords', checked: settings.chords === 'detailed', action: () => { settings.chords = 'detailed' } },
+  { label: 'Jazz chords', checked: settings.chords === 'jazz', action: () => { settings.chords = 'jazz' } },
+  { label: 'Show ♯ and ♭', checked: settings.unicode, separatorBefore: true, action: () => { settings.unicode = !settings.unicode } },
   { label: 'Reset zoom', action: () => settings.setZoom(1) },
   { label: 'Edit song', icon: Pencil, hidden: props.listName === undefined || !settings.me?.canWrite, separatorBefore: true, action: () => current.value && ui.edit(current.value.slug) },
   { label: 'History', icon: History, hidden: !settings.key || !current.value || song(current.value.slug)?.etag === null, separatorBefore: props.listName === undefined, action: () => current.value && ui.history(current.value.slug) },

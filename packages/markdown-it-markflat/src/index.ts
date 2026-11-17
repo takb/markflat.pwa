@@ -1,8 +1,10 @@
 import type { MarkdownIt, StateBlock, StateCore, StateInline, Token } from 'markdown-it'
+import { CHART_LABEL, chartHtml, isChartRow, parseRow, type ChartRow } from './chart.ts'
 import { chordHtml, type ChordOptions } from './chords.ts'
 import { frontMatter, songKey } from './key.ts'
 
 export { chordHtml, parseChord, transposeNote, type Chord, type ChordOptions } from './chords.ts'
+export { alignChart, alignCharts, barItems, CHART_LABEL, chartHtml, isChartRow, parseRow, rowChords, type BarLine, type ChartRow } from './chart.ts'
 export { detectKey, frontMatter, keyName, parseKey, songKey, transposeKey, withKeyField, withoutFrontMatter, type FrontMatter, type Key } from './key.ts'
 
 /**
@@ -13,6 +15,9 @@ export { detectKey, frontMatter, keyName, parseKey, songKey, transposeKey, withK
  *   ~Ch {a}chorus line         a block labelled "Ch", up to the next ~, verse or blank line
  *   {C}.  {|:}  ==             a chord with no syllable, a repeat mark, a wide space
  *
+ *   ~A {4/4}                    a chord chart: a section label (and time), then rows of bars:
+ *   {| a6 | % | Ab07 | % |      `{` and a bar line start a row; chords without braces
+ *
  * A front matter block at the very top (`---`, `key: Em`, `---`) is not shown; its key spells
  * transposed chords (without one, the key is worked out from the chords).
  *
@@ -22,6 +27,7 @@ export { detectKey, frontMatter, keyName, parseKey, songKey, transposeKey, withK
  */
 export default function markflat(md: MarkdownIt, defaults: ChordOptions = {}): void {
   md.block.ruler.before('table', 'markflat_front_matter', frontMatterBlock)
+  md.block.ruler.before('table', 'markflat_chart', chartBlock, { alt: ['paragraph'] })
   md.block.ruler.before('paragraph', 'markflat_block', labelledBlock, { alt: ['paragraph'] })
   md.inline.ruler.before('emphasis', 'markflat_chord', chord)
   md.inline.ruler.before('emphasis', 'markflat_space', wideSpace)
@@ -43,12 +49,15 @@ export default function markflat(md: MarkdownIt, defaults: ChordOptions = {}): v
     const under = base === ' ' ? '&nbsp;&nbsp;&nbsp;' : base === '' ? '&#8203;' : md.utils.escapeHtml(base)
     return '<span class="mb-ca"><span class="mb-chord">' + html + '</span>' + under + '</span>'
   }
+  rules.markflat_chart = (tokens, idx, _o, env) => chartHtml((tokens[idx].meta as { rows: ChartRow[] }).rows, options(env))
   rules.markflat_space = () => '&nbsp;&nbsp;'
   // *text* is italic (<i>); _text_ stays emphasis, which the stylesheet underlines
   rules.em_open = (tokens, idx) => (tokens[idx].markup === '*' ? '<i>' : '<em>')
   rules.em_close = (tokens, idx) => (tokens[idx].markup === '*' ? '</i>' : '</em>')
   rules.markflat_artist_open = () => '<span class="mb-artist">'
   rules.markflat_artist_close = () => '</span>'
+  rules.markflat_remark_open = () => '<span class="mb-remark">'
+  rules.markflat_remark_close = () => '</span>'
   rules.markflat_block_open = (tokens, idx, _o, _env, self) =>
     '<ul class="mb-block"><li' + self.renderAttrs(tokens[idx]) + '>'
   rules.markflat_block_close = () => '</li></ul>\n'
@@ -62,6 +71,42 @@ function frontMatterBlock(state: StateBlock, startLine: number, _endLine: number
   const fm = frontMatter(state.src)
   if (!fm) return false
   if (!silent) state.line = fm.lines
+  return true
+}
+
+// A chord chart: chart rows, each optionally after a section label line (`~A`, `~A {4/4}`), up to
+// the first line that is neither (a blank line ends it too).
+function chartBlock(state: StateBlock, startLine: number, endLine: number, silent: boolean): boolean {
+  if (state.sCount[startLine] - state.blkIndent >= 4) return false
+  const text = (n: number) => state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n])
+  const labelBeforeRow = (n: number) => CHART_LABEL.test(text(n)) && n + 1 < endLine && isChartRow(text(n + 1))
+  if (!isChartRow(text(startLine)) && !labelBeforeRow(startLine)) return false
+  if (silent) return true
+
+  const rows: ChartRow[] = []
+  let next = startLine
+  let label: { name: string, time?: string } | null = null
+  for (; next < endLine; next++) {
+    if (state.isEmpty(next) || state.sCount[next] < state.blkIndent) break
+    if (labelBeforeRow(next)) {
+      const m = CHART_LABEL.exec(text(next))!
+      label = { name: m[1], time: m[2] }
+      continue
+    }
+    const row = parseRow(text(next))
+    if (!row) break
+    if (label) {
+      row.label = label.name
+      if (label.time) row.time = label.time
+      label = null
+    }
+    rows.push(row)
+  }
+  const token = state.push('markflat_chart', 'div', 0)
+  token.block = true
+  token.map = [startLine, next]
+  token.meta = { rows }
+  state.line = next
   return true
 }
 
@@ -80,7 +125,7 @@ function labelledBlock(state: StateBlock, startLine: number, endLine: number, si
   for (; next < endLine; next++) {
     if (state.isEmpty(next) || state.sCount[next] < state.blkIndent) break
     const line = state.src.slice(state.bMarks[next] + state.tShift[next], state.eMarks[next])
-    if (line.startsWith('~') || /^\d+[.)][ \t]/.test(line)) break
+    if (line.startsWith('~') || /^\d+[.)][ \t]/.test(line) || isChartRow(line)) break
   }
   const rest = state.getLines(startLine + 1, next, state.blkIndent, false)
   const content = (first.slice(m[0].length) + (rest ? '\n' + rest : '')).trim()
@@ -154,7 +199,8 @@ function wideSpace(state: StateInline, silent: boolean): boolean {
   return true
 }
 
-// "# Title - Artist": the part after the first " - " becomes the artist.
+// "# Title - Artist (remark)": the part after the first " - " becomes the artist, a "(…)" at its
+// end a remark line under it.
 function artist(state: StateCore): void {
   const tokens = state.tokens
   for (let i = tokens.length - 2; i >= 0; i--) {
@@ -162,6 +208,8 @@ function artist(state: StateCore): void {
     const inline = tokens[i + 1]
     const m = /^(.*?)\s-\s(.*)$/.exec(inline.content)
     if (!m) continue
+    // a "(…)" at the very end is a remark (a style, a capo reminder): a line under the artist
+    const r = /^(.*?\S)\s*(\([^()]*\))$/.exec(m[2])
     const make = (type: string, nesting: 1 | 0 | -1, content = '') => {
       const t = new state.Token(type, nesting === 0 ? '' : 'span', nesting)
       t.content = content
@@ -172,7 +220,8 @@ function artist(state: StateCore): void {
     tokens.splice(i + 1, 1,
       make('inline', 0, m[1]),
       make('markflat_artist_open', 1),
-      make('inline', 0, m[2]),
+      make('inline', 0, r ? r[1] : m[2]),
+      ...(r ? [make('markflat_remark_open', 1), make('inline', 0, r[2]), make('markflat_remark_close', -1)] : []),
       make('markflat_artist_close', -1))
   }
 }

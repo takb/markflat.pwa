@@ -95,7 +95,7 @@ describe('structure', () => {
       "
     `)
     expect(render('# Song - Artist (Capo 2)')).toMatchInlineSnapshot(`
-      "<h1>Song<span class="mb-artist">Artist (Capo 2)</span></h1>
+      "<h1>Song<span class="mb-artist">Artist<span class="mb-remark">(Capo 2)</span></span></h1>
       "
     `)
   })

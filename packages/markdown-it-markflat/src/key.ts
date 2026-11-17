@@ -10,6 +10,7 @@
 // D♯): at most five accidentals (D♭, not C♯; E♭m, not D♯m; F♯ for a major song, E♭m for a minor
 // one), notes outside the key by their usual role (♭II ♭III ♯IV ♭VI ♭VII), never B♯ E♯ C♭ F♭.
 
+import { isChartRow, rowChords } from './chart.ts'
 import { parseChord } from './chords.ts'
 
 export interface FrontMatter {
@@ -96,8 +97,14 @@ export function transposeKey(key: string, by: number): string | null {
  */
 export function detectKey(src: string): string | null {
   const chords: { pc: number, kind: 'major' | 'minor' | 'dim' }[] = []
-  for (const m of withoutFrontMatter(src).matchAll(/\{([^{}\n]+)\}/g)) {
-    const c = parseChord(m[1].trim())
+  const written: string[] = []
+  for (const line of withoutFrontMatter(src).split(/\r\n|\r|\n/)) {
+    // a chart row's chords have no braces
+    if (isChartRow(line)) written.push(...rowChords(line))
+    else for (const m of line.matchAll(/\{([^{}\n]+)\}/g)) written.push(m[1].trim())
+  }
+  for (const w of written) {
+    const c = parseChord(w)
     if (!c || !c.root) continue
     const root = notePc(c.root)
     if (root === null) continue
