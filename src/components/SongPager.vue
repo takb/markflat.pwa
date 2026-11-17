@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { ToolbarButton, ToolbarRoot, ToolbarSeparator } from 'reka-ui'
 import { AArrowDown, AArrowUp, ArrowLeft, ChevronLeft, ChevronRight, Ellipsis, History, Minus, Pencil, Plus, RefreshCw } from '@lucide/vue'
-import { songKey, transposeKey } from 'markdown-it-markflat'
+import { isChartRow, songKey, transposeKey } from 'markdown-it-markflat'
 import { useAutoHide, useSongGestures } from '@/composables/gestures'
 import { useMainMenu } from '@/composables/mainMenu'
 import { useRemote } from '@/stores/remote'
@@ -158,6 +158,9 @@ useEventListener(window, 'keydown', (e: KeyboardEvent) => {
 // Safari on iOS: its own pinch zoom would fight ours.
 useEventListener(document, 'gesturestart', e => e.preventDefault())
 
+// the chart switch only for a song that has a chart
+const hasChart = computed(() => !!current.value && (song(current.value.slug)?.content ?? '').split('\n').some(isChartRow))
+
 const more = computed<MenuEntry[]>(() => [
   // songs changed elsewhere: here only a dot on ⋯ and this entry (RemoteNotice stays away while playing)
   { label: 'Sync (' + remote.count + ' changed)', icon: RefreshCw, hidden: !remote.count, action: () => { download() } },
@@ -165,6 +168,7 @@ const more = computed<MenuEntry[]>(() => [
   { label: 'Detailed chords', checked: settings.chords === 'detailed', action: () => { settings.chords = 'detailed' } },
   { label: 'Jazz chords', checked: settings.chords === 'jazz', action: () => { settings.chords = 'jazz' } },
   { label: 'Show ♯ and ♭', checked: settings.unicode, separatorBefore: true, action: () => { settings.unicode = !settings.unicode } },
+  { label: 'Centre chords in chart bars', checked: settings.centered, hidden: !hasChart.value, action: () => { settings.centered = !settings.centered } },
   { label: 'Reset zoom', action: () => settings.setZoom(1) },
   { label: 'Edit song', icon: Pencil, hidden: props.listName === undefined || !settings.me?.canWrite, separatorBefore: true, action: () => current.value && ui.edit(current.value.slug) },
   { label: 'History', icon: History, hidden: !settings.key || !current.value || song(current.value.slug)?.etag === null, separatorBefore: props.listName === undefined, action: () => current.value && ui.history(current.value.slug) },

@@ -21,6 +21,8 @@ export const useSettings = defineStore('settings', () => {
   const theme = ref<Theme>(pick(storage.get('markflat.theme'), ['system', 'light', 'dark'], 'system'))
   const sortBy = ref<'title' | 'artist'>(pick(storage.get('markflat.sort'), ['title', 'artist'], 'title'))
   const unicode = ref(storage.get('markflat.unicode') !== '0')
+  // charts: a bar's only chord in its middle
+  const centered = ref(storage.get('markflat.centered') === '1')
   // how chords are written: as in the song (a, C7+), spelled out (Am, Cmaj7) or jazz (A–, CΔ7);
   // "detailed" was a switch of its own until chord charts came
   const chords = ref<ChordStyle>(pick(storage.get('markflat.chords'), ['plain', 'detailed', 'jazz'], storage.get('markflat.detailed') === '1' ? 'detailed' : 'plain'))
@@ -29,6 +31,7 @@ export const useSettings = defineStore('settings', () => {
   watch(zoom, z => storage.set('markflat.zoom', String(z)))
   watch(sortBy, s => storage.set('markflat.sort', s))
   watch(unicode, u => storage.set('markflat.unicode', u ? '1' : '0'))
+  watch(centered, c => storage.set('markflat.centered', c ? '1' : '0'))
   watch(chords, c => storage.set('markflat.chords', c))
   watchEffect(() => {
     storage.set('markflat.theme', theme.value)
@@ -55,7 +58,7 @@ export const useSettings = defineStore('settings', () => {
 
   const setZoom = (z: number) => { zoom.value = clampZoom(z) }
 
-  return { key, me, zoom, theme, sortBy, unicode, chords, api, setKey, checkKey, setZoom }
+  return { key, me, zoom, theme, sortBy, unicode, centered, chords, api, setKey, checkKey, setZoom }
 })
 
 function readMe(): Me | null {

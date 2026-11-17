@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{ content: string, transpose?: number, zo
 const settings = useSettings()
 const root = ref<HTMLElement>()
 const html = computed(() => md.render(props.content, {
-  transpose: props.transpose, detailed: settings.chords === 'detailed', jazz: settings.chords === 'jazz', unicode: settings.unicode,
+  transpose: props.transpose, detailed: settings.chords === 'detailed', jazz: settings.chords === 'jazz', unicode: settings.unicode, centered: settings.centered,
 }))
 
 // Charts take the full width with equal bars; their chords are 1.6 × the lyrics, made smaller

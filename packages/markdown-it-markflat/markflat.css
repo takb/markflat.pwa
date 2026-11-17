@@ -146,6 +146,10 @@
   align-items: baseline;
   padding: 0.1em 0.3em 0.1em 0.45em;
 }
+/* centred display: a bar's only chord in its middle */
+.mb-chart-centered .mb-chords-1 {
+  justify-items: center;
+}
 .mb-chords:has(.mb-time-in-bar) {
   grid-template-columns: auto repeat(calc(var(--n) - 1), minmax(0, 1fr));
 }

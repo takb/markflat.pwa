@@ -170,7 +170,7 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
       html += '<div class="' + classes.join(' ') + '"' + (endingStart ? ' data-ending="' + escapeHtml(ending!) + '"' : '') + '>'
         + barLine(left, 'start', i === 0)
         + marks.join('')
-        + '<span class="mb-chords" style="--n:' + Math.max(1, content.length) + '">' + content.join('') + '</span>'
+        + '<span class="mb-chords' + (content.length === 1 ? ' mb-chords-1' : '') + '" style="--n:' + Math.max(1, content.length) + '">' + content.join('') + '</span>'
         + barLine(right, 'end', last)
         + '</div>'
       // an ending runs to the next closing bar line, or to the row's end
@@ -179,7 +179,7 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
     for (let i = row.bars.length; i < cols; i++) html += '<div class="mb-bar mb-bar-none"></div>'
     out.push(html + '</div>')
   }
-  return '<div class="mb-chart" style="--cols:' + cols + '">\n' + out.join('\n') + '\n</div>\n'
+  return '<div class="mb-chart' + (o.centered ? ' mb-chart-centered' : '') + '" style="--cols:' + cols + '">\n' + out.join('\n') + '\n</div>\n'
 }
 
 function timeHtml(time: string, inBar = false): string {

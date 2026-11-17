@@ -11,6 +11,8 @@ export interface ChordOptions {
   detailed?: boolean
   /** jazz symbols: a → A–, C7+ → CΔ7, C0 → C°, a7b5 → Aø7 (wins over `detailed`) */
   jazz?: boolean
+  /** charts: a bar with one chord shows it centred (bars with more chords stay as they are) */
+  centered?: boolean
   /**
    * the song's key (`G`, `Em`): transposed chords are spelled in the key they end up in. The
    * plugin sets it from the song (its `key:` field, or its chords); without it, a flat note

@@ -109,7 +109,8 @@ every chart's bars so their bar lines line up in the source.
 
 **Chord display.** `md.render(src, { jazz: true })` writes chords with jazz symbols: `a` → A–,
 `C7+` → CΔ7, `C0` → C°, `a7b5` → Aø7, `C+` → C+ (in charts and lyrics); `detailed: true` spells
-them out (Am, Cmaj7, Cdim). **The heading:** a `(…)` at the very end of `# Title - Artist (…)`
+them out (Am, Cmaj7, Cdim). `centered: true` shows a chart bar's only chord in the middle of the
+bar (`.mb-chart-centered`; bars with more chords are unchanged). **The heading:** a `(…)` at the very end of `# Title - Artist (…)`
 becomes a remark line under the artist (`<span class="mb-remark">`), e.g. a style or a capo
 reminder; it is never a transposition.
 

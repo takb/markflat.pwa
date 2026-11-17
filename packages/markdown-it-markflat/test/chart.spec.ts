@@ -73,6 +73,12 @@ describe('charts', () => {
     expect(html.indexOf('mb-chart')).toBeGreaterThan(html.indexOf('chorus'))
     expect(html).toContain('<p>after</p>')
   })
+  it('centre a bar\'s only chord when asked', () => {
+    const html = md.render('{| C | F G | % |', { centered: true })
+    expect(html).toContain('class="mb-chart mb-chart-centered"')
+    expect(html.match(/mb-chords mb-chords-1/g)).toHaveLength(2) // C and the repeat sign, not "F G"
+    expect(md.render('{| C |')).not.toContain('mb-chart-centered')
+  })
   it('transpose with the song', () => {
     expect(chords(md.render('{| C | F | G7 | a |', { transpose: 3 }))).toEqual(['Eb', 'Ab', 'Bb7', 'c'])
   })
