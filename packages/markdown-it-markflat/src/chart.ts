@@ -113,9 +113,15 @@ const REPEAT = (n: number) => {
 
 const CLOSING = new Set<BarLine | null>([':|', '||', '|.'])
 
-// `edge`: the row's first or last bar line (a double bar there has its outer line thick)
+// A bar line is part of its bar's layout: the lines, and a repeat's dots on the side of the bar it
+// repeats, so the chords start (or end) after it. `edge`: the row's first or last bar line (a
+// double bar there has its outer line thick).
 function barLine(t: BarLine | null, side: 'start' | 'end', edge: boolean): string {
-  return t ? '<span class="mb-bl mb-bl-' + side + (edge ? ' mb-bl-edge' : '') + '" data-bl="' + escapeHtml(t) + '"></span>' : ''
+  if (!t) return ''
+  const lines = '<span class="mb-bl-lines"></span>'
+  const dots = '<span class="mb-bl-dots"></span>'
+  const inner = t === '|:' ? lines + dots : t === ':|' ? dots + lines : lines
+  return '<span class="mb-bl mb-bl-' + side + (edge ? ' mb-bl-edge' : '') + '" data-bl="' + escapeHtml(t) + '">' + inner + '</span>'
 }
 
 /** A chart as HTML: one grid for all its rows, as many columns as its longest row has bars. */
@@ -134,8 +140,10 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
       + (time ? timeHtml(time) : '')
       + '</span>'
     items.forEach((words, i) => {
-      const left = i === 0 ? row.start : row.ends[i - 1]
       const last = i === row.bars.length - 1
+      // a repeat end closes the bar before it: it is drawn at that bar's end, not the next one's start
+      const left = i === 0 ? row.start : row.ends[i - 1] === ':|' ? null : row.ends[i - 1]
+      const right = last || row.ends[i] === ':|' ? row.ends[i] : null
       const marks: string[] = []
       const content: string[] = []
       let seenChord = false
@@ -163,7 +171,7 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
         + barLine(left, 'start', i === 0)
         + marks.join('')
         + '<span class="mb-chords" style="--n:' + Math.max(1, content.length) + '">' + content.join('') + '</span>'
-        + (last ? barLine(row.ends[i], 'end', true) : '')
+        + barLine(right, 'end', last)
         + '</div>'
       // an ending runs to the next closing bar line, or to the row's end
       if (ending !== null && (CLOSING.has(row.ends[i]) || last)) ending = null

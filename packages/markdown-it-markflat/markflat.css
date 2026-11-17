@@ -134,15 +134,17 @@
 .mb-bar {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   min-height: 1.5em;
-  padding: 0.1em 0.3em 0.1em 0.55em;
 }
 .mb-chords {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
   display: grid;
   grid-template-columns: repeat(var(--n), minmax(0, 1fr));
   align-items: baseline;
-  width: 100%;
+  padding: 0.1em 0.3em 0.1em 0.45em;
 }
 .mb-chords:has(.mb-time-in-bar) {
   grid-template-columns: auto repeat(calc(var(--n) - 1), minmax(0, 1fr));
@@ -179,61 +181,55 @@
 
 /* Bar lines, with two line widths and one gap for every kind: | thin; || two thin (at a row's
    start or end the outer one thick); |. thin and thick; |: thick, thin and two dots; :| the
-   mirror of |:. */
+   mirror of |:. A bar line takes its own width in the bar (dots included), so chords never
+   overlap it. */
 .mb-bl {
-  position: absolute;
-  top: 0.02em;
-  bottom: 0.02em;
-  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin: 0.02em 0;
   --thin: max(1.5px, 0.065em);
   --thick: max(2.5px, 0.1em);
   --gap: max(3px, 0.12em);
   --dot: max(3px, 0.12em);
 }
-.mb-bl-start {
-  left: 0;
-}
-.mb-bl-end {
-  right: 0;
-}
-.mb-bl[data-bl='|'] {
+.mb-bl-lines {
+  align-self: stretch;
+  box-sizing: border-box;
   border-left: var(--thin) solid currentColor;
 }
-.mb-bl[data-bl='||'] {
+.mb-bl[data-bl='|'] .mb-bl-lines {
+  width: var(--thin);
+}
+.mb-bl[data-bl='||'] .mb-bl-lines {
   width: calc(2 * var(--thin) + var(--gap));
-  border-left: var(--thin) solid currentColor;
   border-right: var(--thin) solid currentColor;
 }
-.mb-bl[data-bl='|.'],
-.mb-bl[data-bl=':|'],
-.mb-bl-end.mb-bl-edge[data-bl='||'] {
+.mb-bl[data-bl='|.'] .mb-bl-lines,
+.mb-bl[data-bl=':|'] .mb-bl-lines,
+.mb-bl-end.mb-bl-edge[data-bl='||'] .mb-bl-lines {
   width: calc(var(--thin) + var(--gap) + var(--thick));
-  border-left: var(--thin) solid currentColor;
   border-right: var(--thick) solid currentColor;
 }
-.mb-bl[data-bl='|:'],
-.mb-bl-start.mb-bl-edge[data-bl='||'] {
+.mb-bl[data-bl='|:'] .mb-bl-lines,
+.mb-bl-start.mb-bl-edge[data-bl='||'] .mb-bl-lines {
   width: calc(var(--thick) + var(--gap) + var(--thin));
-  border-left: var(--thick) solid currentColor;
+  border-left-width: var(--thick);
   border-right: var(--thin) solid currentColor;
 }
-.mb-bl[data-bl='|:']::after,
-.mb-bl[data-bl=':|']::after {
-  content: '';
-  position: absolute;
-  top: calc(50% - 0.25em);
+.mb-bl-dots {
   width: var(--dot);
   height: var(--dot);
   border-radius: 50%;
   background: currentColor;
   box-shadow: 0 0.38em currentColor;
+  transform: translateY(-0.19em);
 }
-/* the dots one gap away from the thin line */
-.mb-bl[data-bl='|:']::after {
-  left: calc(100% + var(--gap) - var(--thin));
+.mb-bl[data-bl='|:'] .mb-bl-dots {
+  margin-left: var(--gap);
 }
-.mb-bl[data-bl=':|']::after {
-  right: calc(100% + var(--gap) - var(--thin));
+.mb-bl[data-bl=':|'] .mb-bl-dots {
+  margin-right: var(--gap);
 }
 
 /* Marks: coda and segno above the bar line they stand next to, other marks as small text. */
