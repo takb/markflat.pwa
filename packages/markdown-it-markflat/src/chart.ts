@@ -164,7 +164,7 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
           if (/^\d+\/\d+$/.test(inner)) content.push(timeHtml(inner, true))
           else if (/^\d+\.$/.test(inner)) ending = inner
           // at a row's very start the sign stays right of the bar line, clear of the section label
-          else if (SIGN[name]) marks.push('<span class="mb-sign mb-at-' + side + (i === 0 && side === 'start' ? ' mb-at-row-start' : '') + '" title="' + name + '">' + SIGN[name] + '</span>')
+          else if (SIGN[name]) marks.push('<span class="mb-sign mb-sign-' + name + ' mb-at-' + side + (i === 0 && side === 'start' ? ' mb-at-row-start' : '') + '" title="' + name + '">' + SIGN[name] + '</span>')
           else marks.push('<span class="mb-mark mb-at-' + side + '">' + escapeHtml(inner) + '</span>')
           continue
         }

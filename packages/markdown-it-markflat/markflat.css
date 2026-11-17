@@ -256,6 +256,11 @@
 .mb-sign {
   width: 0.65em;
 }
+/* the segno 80 % of the coda's size, its middle where the coda's is */
+.mb-sign-segno {
+  width: 0.52em;
+  margin-top: 0.08em;
+}
 .mb-sign-svg {
   display: block;
   width: 100%;
