@@ -136,7 +136,7 @@
   display: flex;
   align-items: center;
   min-height: 1.5em;
-  padding: 0.1em 0.2em 0.1em 0.3em;
+  padding: 0.1em 0.3em 0.1em 0.55em;
 }
 .mb-chords {
   display: grid;
@@ -180,11 +180,11 @@
 /* Bar lines: | thin, || two thin, |. thin and thick, |: and :| thick, thin and two dots. */
 .mb-bl {
   position: absolute;
-  top: 0.15em;
-  bottom: 0.15em;
+  top: 0.02em;
+  bottom: 0.02em;
   box-sizing: border-box;
-  --thin: max(1px, 0.05em);
-  --thick: max(3px, 0.14em);
+  --thin: max(1.5px, 0.065em);
+  --thick: max(4px, 0.17em);
 }
 .mb-bl-start {
   left: 0;
@@ -196,18 +196,27 @@
   border-left: var(--thin) solid currentColor;
 }
 .mb-bl[data-bl='||'] {
-  width: max(5px, 0.16em);
+  width: max(6px, 0.2em);
   border-left: var(--thin) solid currentColor;
   border-right: var(--thin) solid currentColor;
 }
+/* a double bar at a row's start or end: its outer line thick */
+.mb-bl-start.mb-bl-edge[data-bl='||'] {
+  width: max(8px, 0.26em);
+  border-left-width: var(--thick);
+}
+.mb-bl-end.mb-bl-edge[data-bl='||'] {
+  width: max(8px, 0.26em);
+  border-right-width: var(--thick);
+}
 .mb-bl[data-bl='|.'],
 .mb-bl[data-bl=':|'] {
-  width: max(7px, 0.22em);
+  width: max(8px, 0.26em);
   border-left: var(--thin) solid currentColor;
   border-right: var(--thick) solid currentColor;
 }
 .mb-bl[data-bl='|:'] {
-  width: max(7px, 0.22em);
+  width: max(8px, 0.26em);
   border-left: var(--thick) solid currentColor;
   border-right: var(--thin) solid currentColor;
 }
@@ -223,10 +232,10 @@
   box-shadow: 0 0.38em currentColor;
 }
 .mb-bl[data-bl='|:']::after {
-  left: 0.3em;
+  left: 0.36em;
 }
 .mb-bl[data-bl=':|']::after {
-  right: 0.3em;
+  right: 0.36em;
 }
 
 /* Marks: coda and segno above the bar line they stand next to, other marks as small text. */

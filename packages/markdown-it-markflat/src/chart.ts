@@ -104,8 +104,9 @@ const REPEAT = (n: number) => '<svg class="mb-repeat-svg" viewBox="0 0 ' + (10 +
 
 const CLOSING = new Set<BarLine | null>([':|', '||', '|.'])
 
-function barLine(t: BarLine | null, side: 'start' | 'end'): string {
-  return t ? '<span class="mb-bl mb-bl-' + side + '" data-bl="' + escapeHtml(t) + '"></span>' : ''
+// `edge`: the row's first or last bar line (a double bar there has its outer line thick)
+function barLine(t: BarLine | null, side: 'start' | 'end', edge: boolean): string {
+  return t ? '<span class="mb-bl mb-bl-' + side + (edge ? ' mb-bl-edge' : '') + '" data-bl="' + escapeHtml(t) + '"></span>' : ''
 }
 
 /** A chart as HTML: one grid for all its rows, as many columns as its longest row has bars. */
@@ -150,10 +151,10 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
       const classes = ['mb-bar']
       if (ending !== null) classes.push('mb-in-ending')
       html += '<div class="' + classes.join(' ') + '"' + (endingStart ? ' data-ending="' + escapeHtml(ending!) + '"' : '') + '>'
-        + barLine(left, 'start')
+        + barLine(left, 'start', i === 0)
         + marks.join('')
         + '<span class="mb-chords" style="--n:' + Math.max(1, content.length) + '">' + content.join('') + '</span>'
-        + (last ? barLine(row.ends[i], 'end') : '')
+        + (last ? barLine(row.ends[i], 'end', true) : '')
         + '</div>'
       // an ending runs to the next closing bar line, or to the row's end
       if (ending !== null && (CLOSING.has(row.ends[i]) || last)) ending = null

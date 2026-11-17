@@ -129,10 +129,10 @@ body {
 .mb .mb-artist {
   color: var(--muted);
 }
-/* Charts: chords and bar lines in the text colour, marks in the accent, section labels inverted. */
+/* Charts: chords and bar lines in the text colour, marks and section labels in the accent. */
 .mb {
   --mb-mark: var(--accent);
   --mb-muted: var(--muted);
-  --mb-inverse-bg: var(--text);
-  --mb-inverse-fg: var(--bg);
+  --mb-inverse-bg: var(--accent);
+  --mb-inverse-fg: var(--accent-text);
 }
