@@ -90,7 +90,7 @@ the chords), `transposeKey`.
 | Syntax | Meaning |
 |---|---|
 | `{\|` at the start of a line | a chart row (also `{\|\|`, `{\|:`, `{\|.`, `{:\|`); a line starting with a closed mark such as `{\|:}` stays lyrics |
-| `\|` `\|\|` `\|.` `\|:` `:\|` | bar lines: single, double, final, repeat start, repeat end |
+| `\|` `\|\|` `\|.` `\|:` `:\|` `:\|\|:` | bar lines: single, double, final, repeat start, repeat end, and both at once (`:\|:` works too) |
 | chords between bar lines | without braces; several in a bar share it equally |
 | `%`, `%%` | repeat the previous bar; the previous two bars (`%%` in the first of the two bars, the second left empty) |
 | `-` or nothing | an empty bar |
@@ -98,7 +98,7 @@ the chords), `transposeKey`.
 | `~A` on its own line before a row | a section label (any word), inverted, above the row's start |
 | `~A {4/4}`, or `{4/4}` at a row's start | the time signature before the first bar; `{3/4}` inside a bar is a time change there |
 | `{coda}`, `{segno}` | the sign above the bar line it stands next to (first in a bar: the bar line before; after a chord: the one after) |
-| `{1.}`, `{2.}` | an ending: a bracket from that bar to the next closing bar line (`:\|` `\|\|` `\|.`) or the row's end |
+| `{1.}`, `{2.}` | an ending: a bracket from that bar to the next closing bar line (`:\|` `:\|\|:` `\|\|` `\|.`) or the row's end, beginning and ending inside its bars |
 | `{fine}`, `{D.C.}`, `{D.S. al coda}`, `{x3}` … | any other mark: small text above the bar (at its start, or at its end after a chord); marks after a row's last bar line (`G :\| {x3}`) belong to the bar before |
 
 All rows of a chart (up to a blank line or a line that is no row or label) share one grid with

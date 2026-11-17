@@ -221,6 +221,15 @@
   border-left-width: var(--thick);
   border-right: var(--thin) solid currentColor;
 }
+/* the second half of :||: (thin and dots), one gap after the first half's thick line */
+.mb-bl.mb-bl-cont[data-bl='|:'] .mb-bl-lines {
+  width: var(--thin);
+  border-left-width: var(--thin);
+  border-right: 0;
+}
+.mb-bl-cont {
+  margin-left: var(--gap);
+}
 .mb-bl-dots {
   width: var(--dot);
   height: var(--dot);
@@ -273,7 +282,8 @@
   right: 0.7em;
 }
 
-/* Endings (1. 2.): a bracket over their bars, the number at its start. */
+/* Endings (1. 2.): a bracket over their bars, the number at its start. It begins and ends inside
+   its first and last bar, clear of the bar lines and of a neighboring ending. */
 .mb-in-ending::before {
   content: '';
   position: absolute;
@@ -283,14 +293,18 @@
   border-top: max(1px, 0.05em) solid var(--mb-mark, currentColor);
 }
 .mb-in-ending[data-ending]::before {
+  left: 0.35em;
   height: 0.35em;
   border-left: max(1px, 0.05em) solid var(--mb-mark, currentColor);
+}
+.mb-ending-end::before {
+  right: 0.35em;
 }
 .mb-in-ending[data-ending]::after {
   content: attr(data-ending);
   position: absolute;
   top: -0.32em;
-  left: 0.2em;
+  left: 1.15em; /* in the number's own (smaller) em: just right of the bracket's start */
   font-size: 0.4em;
   font-weight: bold;
   color: var(--mb-mark, currentColor);

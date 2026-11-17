@@ -14,7 +14,7 @@
 
 import { chordHtml, parseChord, type ChordOptions } from './chords.ts'
 
-export type BarLine = '|' | '||' | '|.' | '|:' | ':|'
+export type BarLine = '|' | '||' | '|.' | '|:' | ':|' | ':||:'
 
 export interface ChartRow {
   /** the bar line the row starts with */
@@ -38,7 +38,9 @@ export const isChartRow = (line: string) => /^\{(\||:\|)/.test(line.trim()) && !
 /** A section label line in a chart: `~A`, or `~A {4/4}`. */
 export const CHART_LABEL = /^~([^\s~{]+)(?:[ \t]+\{(\d+\/\d+)\})?[ \t]*$/
 
-const BAR_LINE = /^(:\||\|\||\|\.|\|:|\|)/
+// `:||:` (or `:|:`) ends one repeat and starts the next
+const BAR_LINE = /^(:\|\|:|:\|:|:\||\|\||\|\.|\|:|\|)/
+const barLineOf = (text: string): BarLine => (text === ':|:' ? ':||:' : text as BarLine)
 
 /** A row's bar lines and bars; null for a line that is no chart row. */
 export function parseRow(line: string): ChartRow | null {
@@ -48,7 +50,7 @@ export function parseRow(line: string): ChartRow | null {
   const first = BAR_LINE.exec(text.slice(pos))
   if (!first) return null
   pos += first[0].length
-  const row: ChartRow = { start: first[0] as BarLine, bars: [], ends: [] }
+  const row: ChartRow = { start: barLineOf(first[0]), bars: [], ends: [] }
   let cell = ''
   while (pos < text.length) {
     const c = text[pos]
@@ -62,7 +64,7 @@ export function parseRow(line: string): ChartRow | null {
     const bar = BAR_LINE.exec(text.slice(pos))
     if (bar) {
       row.bars.push(cell.trim())
-      row.ends.push(bar[0] as BarLine)
+      row.ends.push(barLineOf(bar[0]))
       cell = ''
       pos += bar[0].length
       continue
@@ -111,17 +113,20 @@ const REPEAT = (n: number) => {
     + '<circle cx="5" cy="6" r="2.3" fill="currentColor"/><circle cx="' + (w - 5) + '" cy="14" r="2.3" fill="currentColor"/></svg>'
 }
 
-const CLOSING = new Set<BarLine | null>([':|', '||', '|.'])
+const CLOSING = new Set<BarLine | null>([':|', ':||:', '||', '|.'])
 
 // A bar line is part of its bar's layout: the lines, and a repeat's dots on the side of the bar it
 // repeats, so the chords start (or end) after it. `edge`: the row's first or last bar line (a
 // double bar there has its outer line thick).
-function barLine(t: BarLine | null, side: 'start' | 'end', edge: boolean): string {
+// `:||:` between two bars is drawn in halves: `:|` at the end of the first bar (dots, thin, thick),
+// and the rest at the start of the second (`cont`: thin, dots), so the thick line is shared.
+function barLine(t: BarLine | 'cont' | null, side: 'start' | 'end', edge: boolean): string {
   if (!t) return ''
   const lines = '<span class="mb-bl-lines"></span>'
   const dots = '<span class="mb-bl-dots"></span>'
-  const inner = t === '|:' ? lines + dots : t === ':|' ? dots + lines : lines
-  return '<span class="mb-bl mb-bl-' + side + (edge ? ' mb-bl-edge' : '') + '" data-bl="' + escapeHtml(t) + '">' + inner + '</span>'
+  const kind = t === 'cont' ? '|:' : t
+  const inner = kind === '|:' ? lines + dots : kind === ':|' ? dots + lines : lines
+  return '<span class="mb-bl mb-bl-' + side + (edge ? ' mb-bl-edge' : '') + (t === 'cont' ? ' mb-bl-cont' : '') + '" data-bl="' + escapeHtml(kind) + '">' + inner + '</span>'
 }
 
 /** A chart as HTML: one grid for all its rows, as many columns as its longest row has bars. */
@@ -142,8 +147,10 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
     items.forEach((words, i) => {
       const last = i === row.bars.length - 1
       // a repeat end closes the bar before it: it is drawn at that bar's end, not the next one's start
-      const left = i === 0 ? row.start : row.ends[i - 1] === ':|' ? null : row.ends[i - 1]
-      const right = last || row.ends[i] === ':|' ? row.ends[i] : null
+      const before = i === 0 ? null : row.ends[i - 1]
+      const after = row.ends[i]
+      const left = i === 0 ? (row.start === ':||:' ? '|:' : row.start) : before === ':|' ? null : before === ':||:' ? 'cont' : before
+      const right = after === ':||:' || (after === ':|') ? ':|' : last ? after : null
       const marks: string[] = []
       const content: string[] = []
       let seenChord = false
@@ -165,8 +172,10 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
         else content.push('<span class="mb-cc">' + chordHtml(w, o) + '</span>')
       }
       const endingStart = ending !== null && words.some(w => /^\{\d+\.\}$/.test(w))
+      const endingEnd = ending !== null && (CLOSING.has(after) || last)
       const classes = ['mb-bar']
       if (ending !== null) classes.push('mb-in-ending')
+      if (endingEnd) classes.push('mb-ending-end')
       html += '<div class="' + classes.join(' ') + '"' + (endingStart ? ' data-ending="' + escapeHtml(ending!) + '"' : '') + '>'
         + barLine(left, 'start', i === 0)
         + marks.join('')
@@ -174,7 +183,7 @@ export function chartHtml(rows: ChartRow[], o: ChordOptions = {}): string {
         + barLine(right, 'end', last)
         + '</div>'
       // an ending runs to the next closing bar line, or to the row's end
-      if (ending !== null && (CLOSING.has(row.ends[i]) || last)) ending = null
+      if (endingEnd) ending = null
     })
     for (let i = row.bars.length; i < cols; i++) html += '<div class="mb-bar mb-bar-none"></div>'
     out.push(html + '</div>')

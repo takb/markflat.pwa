@@ -17,6 +17,8 @@ describe('chart rows', () => {
     expect(parseRow('{|: C | G :| {x3}')).toEqual({ start: '|:', bars: ['C', 'G {x3}'], ends: ['|', ':|'] })
     expect(parseRow('{| C | G')).toEqual({ start: '|', bars: ['C', 'G'], ends: ['|', null] })
     expect(parseRow('{| G {D.S. al coda} |.')).toEqual({ start: '|', bars: ['G {D.S. al coda}'], ends: ['|.'] })
+    expect(parseRow('{|: C | G :||: a | F :|')).toEqual({ start: '|:', bars: ['C', 'G', 'a', 'F'], ends: ['|', ':||:', '|', ':|'] })
+    expect(parseRow('{| C :|: G |')?.ends).toEqual([':||:', '|'])
     expect(parseRow('| a | b |')).toBeNull() // a Markdown table stays a table
   })
   it('give their chords for the key', () => {
@@ -65,6 +67,19 @@ describe('charts', () => {
     expect(html.match(/mb-in-ending/g)).toHaveLength(4)
     expect(html).toContain('<span class="mb-mark mb-at-start">fine</span>')
     expect(html).toContain('mb-sign mb-at-end" title="segno"')
+  })
+  it('draw :||: in halves: repeat end on the bar before, the rest on the bar after', () => {
+    const html = md.render('{|: C | G :||: a | F :|')
+    const bars = html.split('<div class="mb-bar').slice(1)
+    expect(bars[1]).toContain('mb-bl-end" data-bl=":|"')
+    expect(bars[2]).toContain('mb-bl-start mb-bl-cont" data-bl="|:"')
+    expect(html).not.toContain('mb-bar-none') // no empty bar between the two halves
+  })
+  it('mark where an ending ends, so its bracket can stop inside the bar', () => {
+    const html = md.render('{| {1.} C | G :| {2.} a | F |.')
+    const bars = html.split('<div class="mb-bar').slice(1)
+    expect(bars.map(b => (b.match(/^ ([\w -]*)"/)?.[1] ?? '').trim())).toEqual([
+      'mb-in-ending', 'mb-in-ending mb-ending-end', 'mb-in-ending', 'mb-in-ending mb-ending-end'])
   })
   it('end at a blank line or text, and leave label blocks alone', () => {
     const html = md.render('1. {C}verse\n   ~Ch {G}chorus\n{| C | G |\nafter')
