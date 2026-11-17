@@ -71,8 +71,13 @@ export function parseRow(line: string): ChartRow | null {
     pos++
   }
   if (cell.trim()) {
-    row.bars.push(cell.trim())
-    row.ends.push(null)
+    const rest = cell.trim()
+    // only marks after the last bar line (`G :| {x3}`) belong to the bar before it
+    if (row.bars.length && barItems(rest).every(w => w.startsWith('{'))) row.bars[row.bars.length - 1] += ' ' + rest
+    else {
+      row.bars.push(rest)
+      row.ends.push(null)
+    }
   }
   return row
 }

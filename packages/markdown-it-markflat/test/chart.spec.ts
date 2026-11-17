@@ -14,7 +14,8 @@ const chords = (html: string) => [...html.matchAll(/<span class="mb-cc">(.*?)<\/
 describe('chart rows', () => {
   it('are bar lines and bars', () => {
     expect(parseRow('{|| a6 | % | F07 F7+ | F7+ ||')).toEqual({ start: '||', bars: ['a6', '%', 'F07 F7+', 'F7+'], ends: ['|', '|', '|', '||'] })
-    expect(parseRow('{|: C | G :| {x3}')).toEqual({ start: '|:', bars: ['C', 'G', '{x3}'], ends: ['|', ':|', null] })
+    expect(parseRow('{|: C | G :| {x3}')).toEqual({ start: '|:', bars: ['C', 'G {x3}'], ends: ['|', ':|'] })
+    expect(parseRow('{| C | G')).toEqual({ start: '|', bars: ['C', 'G'], ends: ['|', null] })
     expect(parseRow('{| G {D.S. al coda} |.')).toEqual({ start: '|', bars: ['G {D.S. al coda}'], ends: ['|.'] })
     expect(parseRow('| a | b |')).toBeNull() // a Markdown table stays a table
   })

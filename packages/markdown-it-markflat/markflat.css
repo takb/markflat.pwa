@@ -177,15 +177,18 @@
   transform: translateX(calc(50% + 0.2em));
 }
 
-/* Bar lines: | thin, || two thin, |. thin and thick, |: and :| thick, thin and two dots. */
+/* Bar lines, with two line widths and one gap for every kind: | thin; || two thin (at a row's
+   start or end the outer one thick); |. thin and thick; |: thick, thin and two dots; :| the
+   mirror of |:. */
 .mb-bl {
   position: absolute;
   top: 0.02em;
   bottom: 0.02em;
   box-sizing: border-box;
   --thin: max(1.5px, 0.065em);
-  --thick: max(4px, 0.17em);
-  --medium: max(2.5px, 0.1em);
+  --thick: max(2.5px, 0.1em);
+  --gap: max(3px, 0.12em);
+  --dot: max(3px, 0.12em);
 }
 .mb-bl-start {
   left: 0;
@@ -197,27 +200,20 @@
   border-left: var(--thin) solid currentColor;
 }
 .mb-bl[data-bl='||'] {
-  width: max(6px, 0.2em);
+  width: calc(2 * var(--thin) + var(--gap));
   border-left: var(--thin) solid currentColor;
   border-right: var(--thin) solid currentColor;
 }
-/* a double bar at a row's start or end: its outer line a little thicker */
-.mb-bl-start.mb-bl-edge[data-bl='||'] {
-  width: max(9px, 0.3em);
-  border-left-width: var(--medium);
-}
-.mb-bl-end.mb-bl-edge[data-bl='||'] {
-  width: max(9px, 0.3em);
-  border-right-width: var(--medium);
-}
 .mb-bl[data-bl='|.'],
-.mb-bl[data-bl=':|'] {
-  width: max(8px, 0.26em);
+.mb-bl[data-bl=':|'],
+.mb-bl-end.mb-bl-edge[data-bl='||'] {
+  width: calc(var(--thin) + var(--gap) + var(--thick));
   border-left: var(--thin) solid currentColor;
   border-right: var(--thick) solid currentColor;
 }
-.mb-bl[data-bl='|:'] {
-  width: max(8px, 0.26em);
+.mb-bl[data-bl='|:'],
+.mb-bl-start.mb-bl-edge[data-bl='||'] {
+  width: calc(var(--thick) + var(--gap) + var(--thin));
   border-left: var(--thick) solid currentColor;
   border-right: var(--thin) solid currentColor;
 }
@@ -226,17 +222,18 @@
   content: '';
   position: absolute;
   top: calc(50% - 0.25em);
-  width: 0.12em;
-  height: 0.12em;
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
   background: currentColor;
   box-shadow: 0 0.38em currentColor;
 }
+/* the dots one gap away from the thin line */
 .mb-bl[data-bl='|:']::after {
-  left: 0.36em;
+  left: calc(100% + var(--gap) - var(--thin));
 }
 .mb-bl[data-bl=':|']::after {
-  right: 0.36em;
+  right: calc(100% + var(--gap) - var(--thin));
 }
 
 /* Marks: coda and segno above the bar line they stand next to, other marks as small text. */

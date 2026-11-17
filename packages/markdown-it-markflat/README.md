@@ -99,7 +99,7 @@ the chords), `transposeKey`.
 | `~A {4/4}`, or `{4/4}` at a row's start | the time signature before the first bar; `{3/4}` inside a bar is a time change there |
 | `{coda}`, `{segno}` | the sign above the bar line it stands next to (first in a bar: the bar line before; after a chord: the one after) |
 | `{1.}`, `{2.}` | an ending: a bracket from that bar to the next closing bar line (`:\|` `\|\|` `\|.`) or the row's end |
-| `{fine}`, `{D.C.}`, `{D.S. al coda}`, `{x3}` … | any other mark: small text above the bar |
+| `{fine}`, `{D.C.}`, `{D.S. al coda}`, `{x3}` … | any other mark: small text above the bar (at its start, or at its end after a chord); marks after a row's last bar line (`G :\| {x3}`) belong to the bar before |
 
 All rows of a chart (up to a blank line or a line that is no row or label) share one grid with
 as many equal bars as its longest row; shorter rows leave the rest empty. Chart chords are 1.6 ×
