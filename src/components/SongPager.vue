@@ -168,7 +168,7 @@ const more = computed<MenuEntry[]>(() => [
   { label: 'Detailed chords', checked: settings.chords === 'detailed', action: () => { settings.chords = 'detailed' } },
   { label: 'Jazz chords', checked: settings.chords === 'jazz', action: () => { settings.chords = 'jazz' } },
   { label: 'Show ♯ and ♭', checked: settings.unicode, separatorBefore: true, action: () => { settings.unicode = !settings.unicode } },
-  { label: 'Centre chords in chart bars', checked: settings.centered, hidden: !hasChart.value, action: () => { settings.centered = !settings.centered } },
+  { label: 'Center chords in chart bars', checked: settings.centered, hidden: !hasChart.value, action: () => { settings.centered = !settings.centered } },
   { label: 'Reset zoom', action: () => settings.setZoom(1) },
   { label: 'Edit song', icon: Pencil, hidden: props.listName === undefined || !settings.me?.canWrite, separatorBefore: true, action: () => current.value && ui.edit(current.value.slug) },
   { label: 'History', icon: History, hidden: !settings.key || !current.value || song(current.value.slug)?.etag === null, separatorBefore: props.listName === undefined, action: () => current.value && ui.history(current.value.slug) },

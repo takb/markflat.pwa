@@ -57,8 +57,8 @@ const setTheme = (v: unknown) => { if (v) settings.theme = v as Theme }
     <input id="apiKey" v-model="keyInput" type="password" class="input" autocomplete="off" @keydown.enter="saveKey">
     <p class="mt-1 min-h-5 text-sm text-muted">{{ keyStatus || 'Your read or write key, from the songbook\'s admin.' }}</p>
 
-    <div class="mt-4 mb-1 text-sm font-semibold">Colours</div>
-    <ToggleGroupRoot :model-value="settings.theme" type="single" class="inline-flex rounded-lg bg-surface p-1" aria-label="Colours" @update:model-value="setTheme">
+    <div class="mt-4 mb-1 text-sm font-semibold">Colors</div>
+    <ToggleGroupRoot :model-value="settings.theme" type="single" class="inline-flex rounded-lg bg-surface p-1" aria-label="Colors" @update:model-value="setTheme">
       <ToggleGroupItem
         v-for="t in themes"
         :key="t.value"

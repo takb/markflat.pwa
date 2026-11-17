@@ -88,7 +88,7 @@ package of its own. Raw HTML in a song is shown as text, not run.
 | `src/App.vue` | switches between the views; the conflict dialog, toasts |
 | `src/stores/songbook.ts` | the songbook (Pinia): songs by name, kept in `localStorage`; download merges, save/delete/rename on the server, conflicts |
 | `src/stores/setlists.ts` | set lists on the device: entries, order, keys per entry, relinking and missing songs |
-| `src/stores/settings.ts` | the key and who it belongs to; this device's zoom, colours, order, chord display |
+| `src/stores/settings.ts` | the key and who it belongs to; this device's zoom, colors, order, chord display |
 | `src/stores/ui.ts` | the current view and song, tied to the browser history (`#/song/<name>`, …) |
 | `src/stores/toast.ts` | short messages |
 | `src/api/client.ts` | the API client (`X-Api-Key`, ETags, errors) |
@@ -96,7 +96,7 @@ package of its own. Raw HTML in a song is shown as text, not run.
 | `src/composables/` | gestures (pinch, two-finger transpose, taps; the toolbar that hides while scrolling), the main menu, the song list as shown |
 | `src/composables/markdown.ts` | the markdown-it instance with the markflat plugin |
 | `packages/markdown-it-markflat/` | the plugin: the markflat syntax, chords, transposition, stylesheet, its tests |
-| `src/components/List.vue`, `SettingsDialog.vue` | the song list, search, menu; settings (key, colours) |
+| `src/components/List.vue`, `SettingsDialog.vue` | the song list, search, menu; settings (key, colors) |
 | `src/components/SongPager.vue` | songs as swipeable pages, with the toolbar and the gestures |
 | `src/components/SongPage.vue`, `SetPlayer.vue`, `SongSheet.vue` | a song from All songs; a set list with its songs; a rendered song |
 | `src/components/SetListView.vue`, `ListChooser.vue`, `AddSongDialog.vue`, `AddToListMenu.vue` | a set list's page (drag and drop); the list chooser; adding songs |
@@ -130,7 +130,7 @@ to `pnpm dev`; the dev server forwards `/api` to it. The example's keys are `dev
 `dev-admin`.
 
 The service worker is disabled in dev mode. Use `pnpm build && pnpm preview` to try the PWA
-behaviour.
+behavior.
 
 ### Tests
 
@@ -206,6 +206,6 @@ from its admin. In November 2026 it was modernised: current tooling and dependen
 CI, the renderer as a markdown-it plugin, a new backend with named keys and song history, and an
 interface rebuilt on Reka UI.
 
-## Licence
+## License
 
 [GPL-3.0](LICENSE)

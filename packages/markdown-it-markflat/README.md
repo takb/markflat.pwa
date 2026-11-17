@@ -126,10 +126,10 @@ reminder; it is never a transposition.
 | heading remark | `<span class="mb-remark">` inside `.mb-artist` |
 | a list item, block or paragraph with chords above its lines | gets the class `mb-has-chords` (more line height) |
 
-`markflat.css` styles all of this inside an element with the class `mb`. Charts take their colours
+`markflat.css` styles all of this inside an element with the class `mb`. Charts take their colors
 from `--mb-mark` (marks), `--mb-inverse-bg`/`--mb-inverse-fg` (section labels) and `--mb-muted`
 (the remark), with black and white defaults.
 
-## Licence
+## License
 
 [MIT](LICENSE)
