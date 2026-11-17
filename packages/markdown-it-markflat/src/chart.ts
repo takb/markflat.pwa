@@ -103,7 +103,8 @@ const escapeHtml = (s: string) =>
 
 const SIGN: Record<string, string> = {
   coda: '<svg class="mb-sign-svg" viewBox="0 0 20 24" aria-hidden="true"><ellipse cx="10" cy="12" rx="5.5" ry="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 1v22M1 12h18" stroke="currentColor" stroke-width="1.6"/></svg>',
-  segno: '<svg class="mb-sign-svg" viewBox="0 0 20 24" aria-hidden="true"><path d="M14 6.5c0-2-2-3.5-4.2-3.5S5.5 4.4 5.5 6.6c0 4.6 9 5 9 10.2 0 2.4-2 4.2-4.6 4.2S5.8 19.4 5.8 17.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 21 17 3" stroke="currentColor" stroke-width="1.4"/><circle cx="4" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="14" r="1.5" fill="currentColor"/></svg>',
+  // an S with ball ends, a slash through it and two dots, each a part of its own
+  segno: '<svg class="mb-sign-svg" viewBox="-2 -3 97 125" aria-hidden="true"><path d="M37 18C37 4 24 0 15 4S2 22 12 31 40 48 55 58 91 80 88 100 72 119 63 113 55 102 57 99" fill="none" stroke="currentColor" stroke-width="10.5" stroke-linecap="round"/><circle cx="37" cy="18" r="8.5" fill="currentColor"/><circle cx="57" cy="100" r="8.5" fill="currentColor"/><path d="M10 114 85 7" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><circle cx="9" cy="67" r="8" fill="currentColor"/><circle cx="86" cy="50" r="8" fill="currentColor"/></svg>',
 }
 // the repeat sign: a slash (two for %%) between two dots, point-symmetric about its centre
 const REPEAT = (n: number) => {
