@@ -10,7 +10,7 @@ export const MAX_ZOOM = 2.5
 export const clampZoom = (z: number) => Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z)) * 100) / 100
 
 // The key (one field: a write key also reads), who it belongs to, and this device's
-// preferences: zoom (the song's font size), colours, the list's order, the chord display.
+// preferences: zoom (the song's font size), the lists' font size, colors, the list's order, the chord display.
 export type ChordStyle = 'plain' | 'detailed' | 'jazz'
 
 export const useSettings = defineStore('settings', () => {
@@ -18,6 +18,8 @@ export const useSettings = defineStore('settings', () => {
   // who the key belongs to, remembered so the app knows offline too
   const me = ref<Me | null>(readMe())
   const zoom = ref(clampZoom(Number(storage.get('markflat.zoom')) || 1))
+  // the song lists' font size (All songs, a set list's page), pinched apart from the songs'
+  const listZoom = ref(clampZoom(Number(storage.get('markflat.listZoom')) || 1))
   const theme = ref<Theme>(pick(storage.get('markflat.theme'), ['system', 'light', 'dark'], 'system'))
   const sortBy = ref<'title' | 'artist'>(pick(storage.get('markflat.sort'), ['title', 'artist'], 'title'))
   const unicode = ref(storage.get('markflat.unicode') !== '0')
@@ -29,6 +31,7 @@ export const useSettings = defineStore('settings', () => {
   const api = createApi(() => key.value)
 
   watch(zoom, z => storage.set('markflat.zoom', String(z)))
+  watch(listZoom, z => storage.set('markflat.listZoom', String(z)))
   watch(sortBy, s => storage.set('markflat.sort', s))
   watch(unicode, u => storage.set('markflat.unicode', u ? '1' : '0'))
   watch(centered, c => storage.set('markflat.centered', c ? '1' : '0'))
@@ -57,8 +60,9 @@ export const useSettings = defineStore('settings', () => {
   }
 
   const setZoom = (z: number) => { zoom.value = clampZoom(z) }
+  const setListZoom = (z: number) => { listZoom.value = clampZoom(z) }
 
-  return { key, me, zoom, theme, sortBy, unicode, centered, chords, api, setKey, checkKey, setZoom }
+  return { key, me, zoom, listZoom, theme, sortBy, unicode, centered, chords, api, setKey, checkKey, setZoom, setListZoom }
 })
 
 function readMe(): Me | null {

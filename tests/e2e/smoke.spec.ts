@@ -358,3 +358,31 @@ test('a chord chart: typed, aligned, shown as bars in jazz symbols', async ({ pa
   await expect(preview.locator('.mb-section')).toHaveText('A')
   await expect(preview.locator('.mb-cc').first()).toHaveText('a6')
 })
+
+test('on a phone: a pinch on the list sets the rows\' font size, kept, apart from the songs\'', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ ...devices['Pixel 7'], baseURL })
+  const page = await context.newPage()
+  await open(page, 'e2e-read')
+  const list = page.getByTestId('song-list')
+  await expect(list).toHaveCSS('font-size', '16px')
+
+  const touch = (type: string, points: [number, number][], changed = points) => list.evaluate((el, a) => {
+    const t = (p: number[], i: number) => new Touch({ identifier: i, target: el, clientX: p[0], clientY: p[1] })
+    el.dispatchEvent(new TouchEvent(a.type, {
+      touches: a.points.map(t), targetTouches: a.points.map(t), changedTouches: a.changed.map(t), bubbles: true, cancelable: true,
+    }))
+  }, { type, points, changed })
+  // fingers apart to one and a half times their distance: rows one and a half times as large
+  await touch('touchstart', [[150, 200], [250, 200]])
+  await touch('touchmove', [[125, 200], [275, 200]])
+  await page.waitForTimeout(50)
+  await touch('touchend', [], [[125, 200], [275, 200]])
+  await expect(list).toHaveCSS('font-size', '24px')
+  await expect(list.locator('[data-song] .text-muted').first()).toHaveCSS('font-size', '21px') // the artist, 0.875 em
+
+  await page.reload()
+  await expect(page.getByTestId('song-list')).toHaveCSS('font-size', '24px')
+  await page.locator('[data-song]', { hasText: 'Yesterday' }).click()
+  await expect(sheet(page)).toHaveCSS('font-size', '16px') // the song keeps its own size
+  await context.close()
+})

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { Download, EllipsisVertical, ListPlus, Plus, Search, Settings, X } from '@lucide/vue'
+import { useSongGestures } from '@/composables/gestures'
 import { useMainMenu } from '@/composables/mainMenu'
 import { useVisibleSongs } from '@/composables/visibleSongs'
 import { useSettings } from '@/stores/settings'
@@ -9,6 +10,7 @@ import { useSongbook } from '@/stores/songbook'
 import { useUi } from '@/stores/ui'
 import AppMenu from './ui/AppMenu.vue'
 import AddToListMenu from './AddToListMenu.vue'
+import { usePinchListZoom } from '@/composables/listZoom'
 import ListChooser from './ListChooser.vue'
 
 // All songs (D7, set lists L5): one row per song, the list chooser and a search that stay at the
@@ -28,9 +30,12 @@ function openMenu(slug: string) {
   menuOpen.value = true
 }
 
-// No browser zoom on the list (only the song page zooms, by its font size). touch-action in the
-// style below covers Chrome and Firefox; Safari on iOS needs its gesture events stopped.
+// No browser zoom on the list: a pinch sets the rows' font size instead (as on a song). touch-action
+// in the style below covers Chrome and Firefox; Safari on iOS needs its gesture events stopped.
 useEventListener(document, 'gesturestart', e => e.preventDefault())
+const root = ref<HTMLElement>()
+const listPinch = usePinchListZoom()
+useSongGestures(root, { pinch: listPinch })
 
 // Back from a song: where the list was.
 onMounted(() => nextTick(() => window.scrollTo(0, ui.listScroll)))
@@ -38,7 +43,7 @@ onBeforeUnmount(() => { ui.listScroll = window.scrollY })
 </script>
 
 <template>
-  <div class="list mx-auto flex min-h-dvh max-w-2xl flex-col">
+  <div ref="root" class="list mx-auto flex min-h-dvh max-w-2xl flex-col">
     <header class="sticky top-0 z-20 flex items-center gap-1 border-b border-line bg-bg/95 px-2 py-2 backdrop-blur">
       <AppMenu :items="items" label="Menu"><EllipsisVertical :size="20" /></AppMenu>
       <ListChooser />
@@ -54,12 +59,12 @@ onBeforeUnmount(() => { ui.listScroll = window.scrollY })
       </button>
     </header>
 
-    <ul v-if="songs.length" class="divide-y divide-line">
+    <ul v-if="songs.length" class="divide-y divide-line" :style="{ fontSize: settings.listZoom + 'rem' }" data-testid="song-list">
       <li v-for="s in songs" :key="s.slug" class="flex items-center pr-2 hover:bg-surface">
         <button type="button" class="song-row flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 pr-2 text-left focus-visible:bg-surface focus-visible:outline-none" :data-song="s.slug" @click="ui.show(s.slug)">
           <span class="min-w-0 flex-1">
             <span class="block truncate font-medium">{{ s.title || s.slug }}</span>
-            <span v-if="s.artist" class="block truncate text-sm text-muted">{{ s.artist }}</span>
+            <span v-if="s.artist" class="block truncate text-[0.875em] text-muted">{{ s.artist }}</span>
           </span>
           <span v-if="songbook.changed(s.slug)" class="text-xs text-accent" title="Changed here, not uploaded yet" aria-label="changed here">●</span>
         </button>

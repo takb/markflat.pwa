@@ -5,6 +5,7 @@ import { ToolbarButton, ToolbarRoot, ToolbarSeparator } from 'reka-ui'
 import { AArrowDown, AArrowUp, ArrowLeft, ChevronLeft, ChevronRight, Ellipsis, History, Minus, Pencil, Plus, RefreshCw } from '@lucide/vue'
 import { isChartRow, songKey, transposeKey } from 'markdown-it-markflat'
 import { useAutoHide, useSongGestures } from '@/composables/gestures'
+import { usePinchListZoom } from '@/composables/listZoom'
 import { useMainMenu } from '@/composables/mainMenu'
 import { useRemote } from '@/stores/remote'
 import { tapZone } from '@/lib/gestures'
@@ -54,6 +55,7 @@ const { visible, toggle } = useAutoHide(scroller)
 const arrow = ref<{ side: 'previous' | 'next', n: number } | null>(null)
 const flash = ref(0)
 const pinchZoom = ref<number | null>(null)
+const listPinch = usePinchListZoom()
 
 const pageRef = (n: number) => (el: unknown) => {
   if (el instanceof HTMLElement) pages.set(n, el)
@@ -132,7 +134,8 @@ const zoomBy = (n: number) => settings.setZoom(settings.zoom + n)
 
 useSongGestures(track, {
   pinch(scale, phase) {
-    if (!current.value) return
+    // on a set list's own page (page 0) a pinch sets the list's font size
+    if (!current.value) return listPinch(scale, phase)
     if (phase === 'start') pinchZoom.value = settings.zoom
     else if (phase === 'move' && pinchZoom.value !== null) settings.setZoom(pinchZoom.value * scale)
     else pinchZoom.value = null

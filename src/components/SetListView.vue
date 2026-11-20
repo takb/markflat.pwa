@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { insertNodeAt, removeNode, useSortable } from '@vueuse/integrations/useSortable'
 import { Copy, Ellipsis, EllipsisVertical, GripVertical, Pencil, Plus, Replace, Trash2, X } from '@lucide/vue'
 import { useMainMenu } from '@/composables/mainMenu'
+import { useSettings } from '@/stores/settings'
 import { useSetlists, type SetEntry, type SetList } from '@/stores/setlists'
 import { useToast } from '@/stores/toast'
 import { useUi } from '@/stores/ui'
@@ -17,6 +18,7 @@ import ListChooser from './ListChooser.vue'
 const props = defineProps<{ list: SetList }>()
 const emit = defineEmits<{ play: [page: number] }>()
 const sets = useSetlists()
+const settings = useSettings()
 const toast = useToast()
 const ui = useUi()
 const { items: mainItems } = useMainMenu()
@@ -90,10 +92,10 @@ const listItems = computed<MenuEntry[]>(() => [
       <AppMenu :items="listItems" label="List actions" align="end"><Ellipsis :size="20" /></AppMenu>
     </header>
 
-    <ul v-if="entries.length" ref="ul" class="divide-y divide-line" data-testid="set-entries">
+    <ul v-if="entries.length" ref="ul" class="divide-y divide-line" :style="{ fontSize: settings.listZoom + 'rem' }" data-testid="set-entries">
       <li v-for="e in entries" :key="e.id" class="flex items-center gap-1 pr-2" data-entry :data-slug="e.slug" :data-missing="missing(e) || undefined">
         <span class="handle flex h-11 w-9 shrink-0 cursor-grab items-center justify-center text-muted" aria-label="Drag to reorder" title="Drag to reorder"><GripVertical :size="18" /></span>
-        <span class="w-6 shrink-0 text-right text-sm text-muted tabular-nums">{{ pages[e.id] ?? '–' }}</span>
+        <span class="w-6 shrink-0 text-right text-[0.875em] text-muted tabular-nums">{{ pages[e.id] ?? '–' }}</span>
         <button v-if="!missing(e)" type="button" class="min-w-0 flex-1 truncate px-2 py-2.5 text-left font-medium hover:text-accent" @click="emit('play', pages[e.id])">{{ e.title }}</button>
         <span v-else class="min-w-0 flex-1 truncate px-2 py-2.5 text-muted italic">missing: {{ e.title }}</span>
         <button v-if="e.transpose && !missing(e)" type="button" class="shrink-0 rounded bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent tabular-nums" :aria-label="'Transposed by ' + e.transpose + ', tap to reset'" @click="sets.setTranspose(list.id, e.id, 0)">{{ sign(e.transpose) }}</button>
