@@ -75,7 +75,7 @@ test('edit → save → reload (write key)', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Zeta Song ●' })).toHaveCount(0)
   // The saved song survives a reload (which stays in the editor) and renders the new chord.
   await page.reload()
-  await page.getByRole('button', { name: 'Back' }).click()
+  await page.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(sheet(page).locator('.mb-chord').last()).toHaveText('D')
 })
 
@@ -264,7 +264,7 @@ test('set lists: make one, add, reorder, play, remember the key, replace a missi
   await expect(chord(page)).toHaveText('D♭')
 
   // back: the list page, with the key shown; then All songs
-  await page.getByRole('button', { name: 'Back' }).click()
+  await page.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(page.locator('[data-current][data-page="0"]')).toBeVisible()
   await expect(rows.nth(0)).toContainText('+1')
   await page.goBack()
