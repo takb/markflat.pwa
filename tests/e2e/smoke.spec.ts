@@ -52,6 +52,12 @@ test('list → song → transpose → back (read key)', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click()
   await expect(page.getByRole('menuitem', { name: 'Keys' })).toHaveCount(0)
   await expect(page.getByRole('menuitem', { name: 'Deleted songs' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+
+  // the arrow in front of the title goes back to the list too
+  await page.locator('[data-song]', { hasText: 'Yesterday' }).click()
+  await page.getByRole('button', { name: 'Back to the list' }).click()
+  await expect(page.locator('[data-song]')).toHaveCount(1)
   expect(errors).toEqual([])
 })
 

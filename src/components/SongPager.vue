@@ -131,6 +131,8 @@ const playedKey = computed(() => {
   return to && settings.unicode ? to.replace('#', '♯').replace(/(?<=^[A-G])b/, '♭') : to
 })
 const zoomBy = (n: number) => settings.setZoom(settings.zoom + n)
+// back: to All songs, or to the set list's own page
+const goBack = () => (props.listName === undefined ? emit('back') : emit('update:index', 0))
 
 useSongGestures(track, {
   pinch(scale, phase) {
@@ -185,7 +187,9 @@ const more = computed<MenuEntry[]>(() => [
         <slot name="first" />
       </section>
       <section v-for="(item, i) in items" :key="item.key" :ref="pageRef(i + offset)" class="page" :data-page="i + offset" :data-slug="item.slug" :data-current="shown === i + offset || undefined">
-        <div v-if="near(i + offset) && song(item.slug)" class="mx-auto max-w-4xl px-3 pt-3 pb-24">
+        <div v-if="near(i + offset) && song(item.slug)" class="song relative mx-auto max-w-4xl px-3 pt-3 pb-24" :style="{ fontSize: settings.zoom + 'rem' }">
+          <!-- a second way back, at the title (sized with the song, so it stays at the title) -->
+          <button type="button" class="back absolute left-1 z-10 flex items-center justify-center rounded-md text-muted hover:bg-surface hover:text-fg" aria-label="Back to the list" @click="goBack"><ArrowLeft class="h-[1.1em] w-[1.1em]" /></button>
           <SongSheet :content="song(item.slug)!.content" :transpose="item.transpose" />
         </div>
       </section>
@@ -204,7 +208,7 @@ const more = computed<MenuEntry[]>(() => [
       aria-label="Song"
       :data-visible="visible"
     >
-      <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Back" @click="listName === undefined ? emit('back') : emit('update:index', 0)"><ArrowLeft :size="20" /></ToolbarButton>
+      <ToolbarButton class="btn btn-ghost btn-icon shrink-0" aria-label="Back" @click="goBack"><ArrowLeft :size="20" /></ToolbarButton>
       <ToolbarButton v-if="listName !== undefined" class="my-1 flex min-w-0 flex-1 flex-col items-start rounded-md bg-accent px-2 py-0.5 text-left leading-tight text-accent-fg hover:bg-accent-strong" aria-label="To the set list" data-testid="toolbar-list" @click="emit('update:index', 0)">
         <span class="w-full truncate text-sm font-medium">{{ listName }}</span>
         <span class="text-xs tabular-nums opacity-80">{{ shown }}/{{ items.length }}</span>
@@ -237,6 +241,16 @@ const more = computed<MenuEntry[]>(() => [
 </template>
 
 <style scoped>
+/* The title's back arrow: in front of the title, on its line (the heading is 1.2 em with 0.2 em
+   padding, both in its own size); the title moves right to make room. */
+.back {
+  top: calc(0.75rem + 0.3em);
+  width: 1.6em;
+  height: 1.6em;
+}
+.song :deep(.mb h1) {
+  margin-left: 1.6em;
+}
 .track {
   scrollbar-width: none;
 }
