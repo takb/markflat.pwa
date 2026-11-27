@@ -1,0 +1,11 @@
+# Security alerts and (where enabled) security updates need no entry here; this file only
+# asks for monthly update PRs of the GitHub Actions the workflows use, grouped into one.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
